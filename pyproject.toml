@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rydberg-trampoline"
+version = "0.1.0"
+description = "Resonant bubble nucleation and false-vacuum decay in Rydberg atom arrays."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Rydberg Trampoline contributors" }]
+keywords = [
+  "rydberg",
+  "quantum-simulation",
+  "false-vacuum-decay",
+  "bubble-nucleation",
+  "tensor-networks",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+qutip = ["qutip>=5.0"]
+quspin = ["quspin>=0.3.7"]
+itebd = ["physics-tenpy>=0.11"]
+all = [
+  "qutip>=5.0",
+  "quspin>=0.3.7",
+  "physics-tenpy>=0.11",
+]
+dev = [
+  "pytest>=7.4",
+  "pytest-xdist>=3.5",
+  "hypothesis>=6.90",
+]
+
+[project.scripts]
+rydberg-trampoline = "rydberg_trampoline.cli:main"
+
+[project.urls]
+Paper = "https://journals.aps.org/prl/abstract/10.1103/kqzq-fnr4"
+Preprint = "https://arxiv.org/abs/2512.04637"
+
+[tool.setuptools.packages.find]
+include = ["rydberg_trampoline*"]
+exclude = ["tests*", "scripts*", "docs*"]
+
+[tool.setuptools.package-data]
+rydberg_trampoline = ["data/experimental/*.csv", "data/experimental/*.yaml", "data/experimental/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+  "ignore::DeprecationWarning:qutip.*",
+]

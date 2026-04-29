@@ -1,0 +1,154 @@
+# =============================================================================
+# Rydberg Trampoline — .gitignore
+# =============================================================================
+# Tracked on purpose (do NOT add globs that would match these):
+#   docs/figures/*.png and *.json   → committed plots + run sidecars
+#   rydberg_trampoline/data/experimental/*.csv, *.yaml, *.md
+#                                  → digitised experimental data and provenance
+# =============================================================================
+
+
+# ---------- Python bytecode & C extensions ----------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.dylib
+*.pyd
+
+# ---------- Packaging / build artifacts -------------------------------------
+build/
+dist/
+sdist/
+wheels/
+*.egg
+*.egg-info/
+.eggs/
+*.whl
+pip-wheel-metadata/
+share/python-wheels/
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ---------- Virtual environments --------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.Python
+
+# ---------- Test, coverage, profiling ---------------------------------------
+.pytest_cache/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+nosetests.xml
+junit.xml
+*.cover
+*.prof
+*.lprof
+*.pstats
+
+# ---------- Type checkers & linters -----------------------------------------
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+.pyrightconfig.json
+
+# ---------- Documentation builds --------------------------------------------
+docs/_build/
+docs/.doctrees/
+site/
+
+# ---------- Jupyter ---------------------------------------------------------
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+profile_default/
+ipython_config.py
+
+# ---------- TeNPy / numerics scratch ----------------------------------------
+# These are written by experimental runs and are NOT inputs we want tracked.
+# If a contributor genuinely needs to commit one, use `git add -f`.
+*.h5
+*.hdf5
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.tnp
+tenpy.log
+sim.log
+*.ckpt
+
+# ---------- Editors / IDEs --------------------------------------------------
+.vscode/
+.idea/
+*.code-workspace
+*.iml
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*.swn
+*~
+.\#*
+\#*\#
+.spyproject/
+.spyderproject/
+.atom/
+
+# ---------- OS-level cruft --------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon?
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ---------- Local configuration & secrets -----------------------------------
+.env
+.env.*
+!.env.example
+*.secret
+secrets.json
+.secrets/
+.aws/
+.gcloud/
+*.pem
+*.key
+
+# ---------- Logs, temp files, swap ------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*~$*
+
+# ---------- Build / container leftovers -------------------------------------
+.docker/
+.dockerignore.bak
+docker-compose.override.yml
+
+# ---------- Agent / harness scratch -----------------------------------------
+.claude/
+.claude.json
+.aider*

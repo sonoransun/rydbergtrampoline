@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-04-29T00:33:12.007319+00:00",
+  "stem": "fig_decay_traces",
+  "params": {
+    "N": 6,
+    "delta_l": [
+      0.5,
+      1.0,
+      1.5,
+      2.0,
+      3.0
+    ],
+    "t_max": 4.0,
+    "n_times": 41,
+    "backend": "qutip mesolve"
+  }
+}

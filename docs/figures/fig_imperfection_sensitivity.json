@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-04-29T00:32:08.831053+00:00",
+  "stem": "fig_imperfection_sensitivity",
+  "params": {
+    "N": 10,
+    "backend": "numpy",
+    "delta_l": 2.0,
+    "fidelities": [
+      1.0,
+      0.99,
+      0.95,
+      0.85
+    ],
+    "seed": 2024,
+    "noise_model": "single-flip"
+  }
+}
