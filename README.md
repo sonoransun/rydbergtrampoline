@@ -43,6 +43,34 @@ exponentially enhance bubble production beyond the continuum prediction.
 This package reproduces the closed-system simulation backbone of that
 study and packages the analyses for reuse.
 
+For the longer-form physics walkthrough — Coleman bounce, Rydberg
+blockade, the resonant-nucleation mechanism — see
+[`docs/background.md`](docs/background.md).
+For an architecture deep-dive (module map, dispatcher contract, hidden
+basis-ordering coupling) see [`docs/architecture.md`](docs/architecture.md).
+For per-backend numerical-method details (complexity, accuracy regime,
+which test pins what) see [`docs/numerical_methods.md`](docs/numerical_methods.md).
+
+### A picture of what we're computing
+
+The headline observable is a tunneling rate from the metastable Néel
+configuration. Bubbles of contiguous flipped sites mediate the decay:
+
+![Bubble cartoon](docs/figures/bubble_cartoon.png)
+
+Each backend simulates the staggered-Rydberg Hamiltonian under a
+specific computational tradeoff. The Hilbert-space cost grows
+exponentially in N for full ED, doubly-exponentially for Lindblad, and
+not at all for iTEBD:
+
+![Hilbert dim vs N](docs/figures/hilbert_dim_vs_N.png)
+
+The vdW interaction is dominated by the nearest neighbour
+(by 64×); the iTEBD backend exploits this by truncating to NN-only,
+while the ED backends keep configurable longer ranges:
+
+![V_ij curve](docs/figures/vij_curve.png)
+
 ---
 
 ## The model
@@ -145,11 +173,32 @@ flowchart TD
     classDef box fill:#ecf0f1,stroke:#2c3e50,color:#2c3e50;
     A[numpy<br/>ED ≤ N=18, Lindblad ≤ N=10]:::box
     B[qutip<br/>sesolve, mesolve, mcsolve<br/>auto-switch at N=10]:::box
-    C[quspin<br/>full Hilbert space ≤ N=22 with symmetries]:::box
+    C[quspin<br/>full Hilbert ≤ N=18, kblock sector ≤ N=22]:::box
     D[tenpy iTEBD<br/>thermodynamic limit, χ=100, NN-only]:::box
+    E[bloqade<br/>analog Rydberg<br/>emulator or QuEra Aquila]:::box
     A -. cross-check .-> B
     A -. cross-check .-> C
     A -. cross-check .-> D
+    A -. cross-check .-> E
+```
+
+If you're not sure which backend to reach for, this decision tree
+captures the typical ranking by N and physical regime:
+
+```mermaid
+flowchart TD
+    Q{What do you want?}
+    Q --> H{real Rydberg<br/>hardware?}
+    Q --> D{decoherence<br/>(T1, T2*)?}
+    H -->|yes, paid| HC[bloqade device='cloud']
+    H -->|emulator only| HE[bloqade device='emulator']
+    D -->|yes, N ≤ 10| QM[qutip mesolve]
+    D -->|yes, 10 < N ≤ 18| QC[qutip mcsolve]
+    D -->|no| L{N range?}
+    L -->|N ≤ 8| NA[any closed-system backend]
+    L -->|9 ≤ N ≤ 18, full Hilbert| NN[numpy sparse Krylov]
+    L -->|N ≥ 16, sector OK| QS[quspin kblock=0]
+    L -->|infinite chain| TT[tenpy iTEBD NN-only]
 ```
 
 ---
@@ -366,6 +415,19 @@ docker run --rm -it -v "$PWD":/work -w /work rydberg-trampoline:dev pytest -q
 Avoids the QuSpin / TeNPy install dance on contributor machines.
 
 ---
+
+## Further reading inside this repo
+
+- [`docs/background.md`](docs/background.md) — long-form physics
+  background, from Coleman's bounce to discrete-spectrum resonance.
+- [`docs/architecture.md`](docs/architecture.md) — module map,
+  dispatcher contract, basis-ordering reconciliation per backend.
+- [`docs/numerical_methods.md`](docs/numerical_methods.md) — what each
+  backend's solver actually does, with complexity and accuracy tables.
+- [`docs/cloud_quickstart.md`](docs/cloud_quickstart.md) — running on
+  QuEra Aquila via AWS Braket.
+- [`CLAUDE.md`](CLAUDE.md) — same architecture summary in the format
+  consumed by Claude Code agents.
 
 ## References
 

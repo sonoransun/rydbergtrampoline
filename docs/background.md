@@ -4,6 +4,43 @@ This page expands the README's tagline into a self-contained tour of
 the physics implemented by `rydberg_trampoline`. It is aimed at a
 reader who knows undergraduate quantum mechanics and a bit of QFT.
 
+## Concept map
+
+```mermaid
+flowchart LR
+    classDef phys fill:#ecf0f1,stroke:#2c3e50,color:#2c3e50;
+    classDef ham fill:#fdf2e9,stroke:#e67e22,color:#a04000;
+    classDef obs fill:#d5f5e3,stroke:#16a085,color:#0e6655;
+    classDef fig fill:#fadbd8,stroke:#c0392b,color:#922b21;
+
+    fv[false vacuum]:::phys --> neel[Néel n=(1,0,1,0,...)]:::phys
+    tv[true vacuum]:::phys --> neel2[opposite Néel]:::phys
+    bub[bubble]:::phys --> domain[contiguous flipped run + 2 walls]:::phys
+    coleman[Coleman bounce]:::phys --> action[tunneling action B]:::phys
+
+    neel --> H1[Δ_l n_j stagger]:::ham
+    domain --> H2[V_ij n_i n_j vdW]:::ham
+    blockade[Rydberg blockade]:::phys --> H2
+    drive[two-photon Rabi drive]:::phys --> H3[Ω σ^x]:::ham
+
+    H1 --> M[M_AFM order parameter]:::obs
+    H2 --> SL[Σ_L bubble correlators]:::obs
+    H3 --> M
+
+    M --> F1[fig_decay_traces]:::fig
+    M --> F2[fig_gamma_vs_inv_delta]:::fig
+    M --> F5[fig_imperfection_sensitivity]:::fig
+    SL --> F4[fig_bubble_histogram]:::fig
+    M --> F3[fig_resonance_scan]:::fig
+    SL --> F3
+    action --> F2
+```
+
+The flow reads left-to-right: physics concepts (blue) become Hamiltonian
+terms (orange), which produce observables (green), which appear in the
+hero figures (red). Tracing any figure backward to its physical
+ingredient is one hop per arrow.
+
 ## 1. False vacua and Coleman bounces
 
 Many quantum field theories have multiple local minima of their
@@ -42,6 +79,23 @@ GUT scales), stability of the Standard Model (the
 condensed-matter symmetry-breaking transitions. It is generally
 inaccessible to direct experiment because the relevant rates are
 too small or the systems too violent.
+
+The dictionary between cosmological / QFT objects and the Rydberg
+analogue this package implements:
+
+| Cosmology / QFT | Rydberg analog (this paper / package) |
+|---|---|
+| Scalar field `φ` at false-vacuum minimum | Néel state with even sites occupied |
+| True-vacuum minimum | Opposite-phase Néel (odd sites occupied) |
+| Energy splitting `ε` between minima | Staggered detuning `Δ_l` |
+| Surface tension `σ` of bubble wall | Domain-wall energy from `V_NN` |
+| Critical bubble radius `R*` (Coleman) | Length of the resonance-amplified bubble |
+| Bounce action `S_E` (`Γ ∝ exp(−S_E)`) | Tunneling action `B` (`Γ ∝ exp(−B / Δ_l)`) |
+
+The correspondence is exact at the level of the effective long-wavelength
+field theory; the Rydberg system additionally carries discrete-spectrum
+structure that the continuum field theory misses, which is the source
+of the resonant-nucleation effect described in §5.
 
 ## 2. Rydberg arrays as analog simulators
 
@@ -95,6 +149,14 @@ al.: 1D ring with a staggered detuning,
   contribution (NNN smaller by 64) and provides the effective
   repulsion that makes the bubbles cohesive.
 
+  ![V_ij vs distance](figures/vij_curve.png)
+
+  Each coloured curve shows where the package's `vdW_cutoff = R`
+  argument truncates the tail. The TeNPy iTEBD backend uses `R = 1`
+  (the steepest red curve) because TEBD requires nearest-neighbour
+  bonds; the ED backends default to `R = 8`, which captures essentially
+  all of the tail energy.
+
 The order parameter `M_AFM = (1/N) Σ_j (-1)^j σ^z_j` equals `+1` on
 the false vacuum, `-1` on the true vacuum, and the rescaled
 
@@ -135,6 +197,18 @@ specific bubble eigenstates. At those alignments, the matrix element
 that connects "false vacuum" to "false vacuum + one bubble of length
 L" gets resonantly enhanced, and `Γ` exceeds the smooth law by orders
 of magnitude.
+
+What the bubble looks like, concretely:
+
+![Bubble cartoon](figures/bubble_cartoon.png)
+
+Top row: the metastable false-vacuum Néel. Middle row: a single-flip
+"bubble" — one site has flipped to its true-vacuum value, bordered on
+both sides by false-vacuum sites. Bottom row: a length-3 bubble; the
+three flipped sites are an extended bubble interior, and the orange
+boundaries are the *domain walls* (kinks where neighbours disagree).
+The package's `Σ_L` bubble-density operator counts exactly these
+length-`L` runs of TV-on-FV with FV-bordering on both ends.
 
 Operationally this shows up as:
 

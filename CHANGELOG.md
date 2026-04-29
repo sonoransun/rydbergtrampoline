@@ -8,6 +8,25 @@ reaches 1.0.
 ## [Unreleased]
 
 ### Added
+- **Documentation expansion.** Two new long-form docs:
+  [`docs/architecture.md`](docs/architecture.md) (module map,
+  `run_unitary` Mermaid sequence diagram, class diagram, basis-ordering
+  reconciliation per backend) and
+  [`docs/numerical_methods.md`](docs/numerical_methods.md) (per-backend
+  algorithm walkthroughs, complexity / accuracy tables, regime
+  decision-tree). Three new matplotlib figures committed to
+  `docs/figures/`: `vij_curve.png` (1/r⁶ tail with `vdW_cutoff`
+  truncations), `hilbert_dim_vs_N.png` (memory cost per backend with
+  hard-cap markers), and `bubble_cartoon.png` (Néel false vacuum,
+  single-flip bubble, length-3 bubble with domain-wall annotations).
+  README gains a fifth Mermaid diagram (backend decision tree),
+  embedded versions of the three new figures, and a "Further reading"
+  section linking the new docs. `docs/background.md` gains a Mermaid
+  concept map, the cosmology ↔ Rydberg correspondence table, and the
+  V_ij and bubble figures inline. New one-shot drawing scripts
+  `scripts/draw_vij_curve.py`, `scripts/draw_hilbert_dim.py`, and
+  `scripts/draw_bubble_cartoon.py`. `tests/figure_hashes.json`
+  regenerated to cover the new PNGs.
 - **bloqade / QuEra Aquila cloud backend.** New `backend="bloqade"` runs
   the staggered Rydberg Hamiltonian on bloqade-analog's in-process
   emulator (default, free) or — opt-in via
