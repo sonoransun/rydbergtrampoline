@@ -1,0 +1,16 @@
+include LICENSE
+include README.md
+include CLAUDE.md
+include CHANGELOG.md
+include pyproject.toml
+
+# Long-form physics background and rendered figures referenced from README.
+recursive-include docs *.md *.png
+
+# Experimental-data CSVs and provenance shipped inside the package directory
+# are already covered by [tool.setuptools.package-data]; the include below is
+# what makes them appear in the *sdist* tarball as well.
+recursive-include rydberg_trampoline/data *.csv *.yaml *.md
+
+# Tests excluded from sdist by default; uncomment if you want them shipped.
+# recursive-include tests *.py *.json

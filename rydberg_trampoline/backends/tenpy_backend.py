@@ -127,7 +127,9 @@ class _RydbergStaggeredModel:
                 "Delta_g": params.Delta_g,
                 "Delta_l": params.Delta_l,
                 "V_NN": params.V_NN,
-                "vdW_cutoff": params.vdW_cutoff,
+                # vdW_cutoff is intentionally not propagated: TEBD is NN-only,
+                # so the inner model hard-codes R=1 in init_terms. Surfacing
+                # the cutoff would only cause TeNPy's "unused option" warning.
             },
             "RydbergStaggered",
         )
@@ -146,7 +148,12 @@ def _initial_neel_imps(model: "_RydbergStaggeredModel", phase: int = 0):
     # SpinHalfSite states are 'up' (Sz = +1/2 → σ^z = +1 → n = 1) and 'down' (n=0).
     # phase 0 (false vacuum) → site 0 = up, site 1 = down (alternating in unit cell).
     pattern = ["up", "down"] if phase == 0 else ["down", "up"]
-    return MPS.from_product_state(sites, pattern, bc="infinite")
+    # Pass unit_cell_width explicitly to silence TeNPy 1.1's UserWarning. Our
+    # lattice is a 2-site unit cell on a Chain (one-dimensional), so the
+    # default-value-equivalent (= len(sites) = 2) is correct here.
+    return MPS.from_product_state(
+        sites, pattern, bc="infinite", unit_cell_width=len(sites)
+    )
 
 
 def run_itebd(

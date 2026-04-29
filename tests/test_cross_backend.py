@@ -11,7 +11,7 @@ import pytest
 
 from rydberg_trampoline.dynamics import run_unitary
 from rydberg_trampoline.model import ModelParams
-from tests.conftest import qutip_required, quspin_required, tenpy_required
+from tests.conftest import qutip_required, quspin_required
 
 
 N_REGRESSION = 8
@@ -49,15 +49,4 @@ def test_numpy_qutip_agree() -> None:
     assert diff < 1e-5, f"NumPy/QuTiP disagree by {diff:.3g}"
 
 
-@tenpy_required
-def test_itebd_matches_ed_short_time_nn_only() -> None:
-    """iTEBD truncates to nearest-neighbour; ED with the same truncation must agree."""
-    from rydberg_trampoline.dynamics import run_itebd
-
-    params = ModelParams(N=12, Delta_l=2.0, vdW_cutoff=1)
-    times = np.linspace(0.0, 0.4, 9)
-    ed = run_unitary(params, times, backend="numpy")
-    tn = run_itebd(params, times, chi=80)
-    # Tight only at very short times before the boundary affects the finite-N ED.
-    short_t_diff = float(np.max(np.abs(ed.m_afm[:4] - tn.m_afm[:4])))
-    assert short_t_diff < 1e-6, f"iTEBD/ED short-time disagreement: {short_t_diff:.3g}"
+# The iTEBD-vs-ED short-time agreement test now lives in tests/test_itebd_vs_ed.py.

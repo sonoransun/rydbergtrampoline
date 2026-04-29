@@ -43,3 +43,37 @@ def test_translation_block_count_value() -> None:
     assert translation_block_count(16) == 8
     with pytest.raises(ValueError):
         translation_block_count(7)
+
+
+@quspin_required
+def test_sector_dynamics_match_full() -> None:
+    """Sector-resolved M_AFM(t) from the Néel matches full-Hilbert evolution."""
+    from rydberg_trampoline.dynamics import run_unitary
+
+    params = ModelParams(N=8, Delta_l=2.0, vdW_cutoff=4)
+    times = np.linspace(0.0, 1.0, 21)
+    res_full = run_unitary(params, times, backend="quspin")
+    res_k0 = run_unitary(params, times, backend="quspin", kblock=0)
+    diff = float(np.max(np.abs(res_full.m_afm - res_k0.m_afm)))
+    assert diff < 1e-10, f"sector vs full M_AFM disagree by {diff:.3g}"
+    # Confirm the sector path actually reduced dimension (the speedup point).
+    assert "dim=" in res_k0.notes
+    assert "kblock=0" in res_k0.notes
+
+
+@quspin_required
+def test_sector_rejects_state_outside_sector() -> None:
+    """A Néel + perturbed state may not live in (kblock=0); check the guard."""
+    import numpy as np
+    from rydberg_trampoline.conventions import neel_bitstring
+    from rydberg_trampoline.dynamics import run_unitary
+    from rydberg_trampoline.states import computational_basis_vector
+
+    params = ModelParams(N=8, Delta_l=2.0, vdW_cutoff=4)
+    # A single computational basis state that is *not* T_2-invariant.
+    # |10000000> (only site 0 occupied) is NOT a Néel-like state and
+    # has overlap with multiple kblocks.
+    psi0 = computational_basis_vector(8, 1)  # site 0 = 1, others = 0
+    times = np.linspace(0.0, 0.1, 3)
+    with pytest.raises(ValueError, match="does not lie purely"):
+        run_unitary(params, times, psi0=psi0, backend="quspin", kblock=1)

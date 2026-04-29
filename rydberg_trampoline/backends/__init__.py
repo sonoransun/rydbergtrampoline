@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-BackendName = Literal["numpy", "qutip", "quspin", "tenpy"]
+BackendName = Literal["numpy", "qutip", "quspin", "tenpy", "bloqade"]
 
 
 def available_backends() -> list[BackendName]:
@@ -29,7 +29,20 @@ def available_backends() -> list[BackendName]:
         out.append("tenpy")
     except Exception:
         pass
+    try:
+        import bloqade.analog  # noqa: F401
+        out.append("bloqade")
+    except Exception:
+        pass
     return out
+
+
+_EXTRA_FOR_BACKEND = {
+    "qutip": "qutip",
+    "quspin": "quspin",
+    "tenpy": "itebd",
+    "bloqade": "cloud",
+}
 
 
 def require_backend(name: BackendName) -> None:
@@ -37,7 +50,8 @@ def require_backend(name: BackendName) -> None:
     if name == "numpy":
         return
     if name not in available_backends():
+        extra = _EXTRA_FOR_BACKEND.get(name, name)
         raise ModuleNotFoundError(
             f"backend '{name}' requires the optional dependency. "
-            f"Install with: pip install 'rydberg-trampoline[{ {'qutip': 'qutip', 'quspin': 'quspin', 'tenpy': 'itebd'}[name] }]'"
+            f"Install with: pip install 'rydberg-trampoline[{extra}]'"
         )

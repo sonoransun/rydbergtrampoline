@@ -36,15 +36,27 @@ dependencies = [
 qutip = ["qutip>=5.0"]
 quspin = ["quspin>=0.3.7"]
 itebd = ["physics-tenpy>=0.11"]
+cloud = [
+  "bloqade>=0.30",
+  "amazon-braket-sdk>=1.112",
+  "boto3>=1.34",
+]
 all = [
   "qutip>=5.0",
   "quspin>=0.3.7",
   "physics-tenpy>=0.11",
+  "bloqade>=0.30",
+  "amazon-braket-sdk>=1.112",
+  "boto3>=1.34",
 ]
 dev = [
   "pytest>=7.4",
   "pytest-xdist>=3.5",
   "hypothesis>=6.90",
+  "imagehash>=4.3",
+  "Pillow>=10.0",
+  "ruff>=0.6",
+  "pre-commit>=3.7",
 ]
 
 [project.scripts]
@@ -66,4 +78,21 @@ testpaths = ["tests"]
 addopts = "-ra"
 filterwarnings = [
   "ignore::DeprecationWarning:qutip.*",
+  "ignore:pkg_resources is deprecated:UserWarning",
+  "ignore:Deprecated call to .pkg_resources.declare_namespace:DeprecationWarning",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "build", "dist"]
+
+[tool.ruff.lint]
+# E501 = line too long; long-form physics strings in docstrings will trip it.
+# W291/W293 = trailing whitespace; pre-commit-hooks already handles those.
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "B905"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402", "F401"]
+"rydberg_trampoline/figures/*.py" = ["E402"]

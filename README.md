@@ -199,10 +199,21 @@ bubbles are amplified.
 ![Imperfection sensitivity](docs/figures/fig_imperfection_sensitivity.png)
 
 Replacing the perfect Néel by a slightly perturbed initial state shifts
-the trajectory. The paper shows this collapse of the exponential
-suppression law for finite preparation infidelity; here we see the same
-qualitative trend with a Haar-random admixture (a more physical
-preparation noise model is a TODO).
+the trajectory. The default noise model is a coherent admixture of
+single-flip states (`single_flip_admixed_neel`), which mimics finite
+Rabi-pulse preparation infidelity; lower fidelity decays faster, exactly
+the qualitative effect the paper highlights. A Haar-random admixture is
+available via `--noise-model haar`.
+
+### Finite-N ED vs iTEBD (this package)
+
+![Finite-N vs iTEBD](docs/figures/fig_thermodynamic_limit.png)
+
+Closed-system M_AFM(t) at the same Δ_l for N=8 ED, N=12 ED, and iTEBD
+(N → ∞) with NN-only vdW. The three curves overlap at short times and
+the finite-N=8 trace separates from N=12 and iTEBD around t ≈ 2 μs as
+the boundary makes itself felt. Useful both as a backend showcase and
+as a figure-level cross-check for the iTEBD ↔ ED short-time agreement.
 
 ---
 
@@ -270,8 +281,33 @@ res = run_itebd(params.with_(T1=None, T2_star=None, vdW_cutoff=1), times, chi=80
 |---------|---------|---------------|-------------------|
 | `numpy` | `expm_multiply` Krylov ED, dense Liouvillian Lindblad | 18 / 10 | none |
 | `qutip` | `sesolve`, `mesolve` (≤ 10), `mcsolve` (> 10) | 18 (mcsolve) | `qutip>=5.0` |
-| `quspin`| Krylov ED, full Hilbert space (symmetry sectors are TODO) | 22 with symmetries | `quspin>=0.3.7` |
+| `quspin`| Krylov ED on full Hilbert space *or* a `kblock` / `pblock` symmetry sector | 22 with `kblock` | `quspin>=0.3.7` |
 | `tenpy` | TEBD on a 2-site iMPS (NN-only vdW) | thermodynamic limit | `physics-tenpy>=0.11` |
+| `bloqade` | Analog Rydberg via in-process emulator *or* QuEra Aquila on AWS Braket (paid, opt-in) — shot-statistical, M_AFM only, starts from \|gg…g⟩ | 256 (Aquila) | `bloqade>=0.30`, `amazon-braket-sdk` |
+
+The QuSpin sector path:
+
+```python
+res = run_unitary(params, times, backend="quspin", kblock=0)
+# The Néel false-vacuum lives in (kblock=0, pblock=+1). Larger N benefits
+# most: at N=16 the k=0 sector is ≈ 4× smaller than the full Hilbert space.
+```
+
+The bloqade cloud-and-emulator path:
+
+```python
+# In-process emulator (free, no AWS):
+res = run_unitary(params, times, backend="bloqade", n_shots=2000, seed=0)
+
+# Async variant for notebooks / larger pipelines:
+from rydberg_trampoline import run_unitary_async
+res = await run_unitary_async(params, times, n_shots=2000)
+```
+
+Real-cloud submission to QuEra Aquila and AWS auth setup are documented
+in [`docs/cloud_quickstart.md`](docs/cloud_quickstart.md). Submission is
+gated behind an explicit `i_understand_this_costs_money=True` flag so
+nothing is billed by accident.
 
 Cross-backend regression on N = 8 confirms the closed-system
 M_AFM(t) trajectories agree to ~10⁻⁶ (QuTiP RK tolerance) or 10⁻¹⁴
@@ -305,11 +341,12 @@ Until digitisation is in, the figure scripts simply omit the overlay.
   TeNPy's `ExpMPOEvolution` (W^II MPO) and found to be numerically
   unstable for our parameters in TeNPy 1.1; it is disabled until a TDVP
   iMPS path is wired up.
-- The QuSpin backend now supports **translation-by-2 momentum sectors**
-  (`spin_basis_general` with shift-by-2 permutation); pass `kblock=k`
-  to `to_quspin`. Bond-inversion sectors are exposed via `pblock=±1`.
-  The symmetry-resolved dynamics path (per-sector `evolve`) is a TODO —
-  spectrum-only reach to N=22 already works through `to_quspin`.
+- The QuSpin backend supports **translation-by-2 momentum sectors** at
+  the dynamics level: pass `kblock=k` to `run_unitary` and the initial
+  state is projected into the sector basis before evolution. Bond
+  inversion (`pblock`) is exposed but emits a `GeneralBasisWarning`
+  because it does not strictly commute with translation-by-2 — use one
+  or the other, not both, in production.
 - The imperfection figure now defaults to a coherent **single-flip
   admixture** (`single_flip_admixed_neel`) which models the dominant
   preparation infidelity from a finite Rabi pulse; the Haar-random model

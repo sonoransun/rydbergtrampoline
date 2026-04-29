@@ -6,7 +6,12 @@ Néel state is a metastable false vacuum decaying via bubble nucleation.
 """
 
 from rydberg_trampoline.model import ModelParams
-from rydberg_trampoline.dynamics import run_unitary, run_lindblad, run_itebd
+from rydberg_trampoline.dynamics import (
+    run_unitary,
+    run_unitary_async,
+    run_lindblad,
+    run_itebd,
+)
 from rydberg_trampoline.observables import (
     m_afm_expectation,
     bubble_correlator_expectation,
@@ -16,6 +21,7 @@ from rydberg_trampoline.analysis import fit_decay_rate, fit_tunneling_action
 __all__ = [
     "ModelParams",
     "run_unitary",
+    "run_unitary_async",
     "run_lindblad",
     "run_itebd",
     "m_afm_expectation",

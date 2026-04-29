@@ -100,7 +100,13 @@ def to_quspin(params: ModelParams, *, kblock: int | None = None, pblock: int | N
       take values ``0, 1, …, (N // 2) - 1``. ``kblock=0`` is the
       trivially-symmetric sector. Use :func:`translation_block_count` to
       get the valid range.
-    * ``pblock=±1`` selects the inversion-symmetric / antisymmetric sector.
+    * ``pblock`` selects the bond-inversion eigenvalue, with the
+      label ``0 → +1``, ``1 → -1`` (QuSpin convention for Z_2 blocks).
+      **Note:** translation-by-2 and inversion-through-site-0 do not strictly
+      commute on the ring (they fail by an N/2 shift), so QuSpin emits a
+      ``GeneralBasisWarning``. Empirically the simultaneous-eigenstate
+      sector still reproduces full dynamics to 1e-10 for our Hamiltonian,
+      but the safe combination is ``kblock`` *or* ``pblock`` alone.
 
     Both kept ``None`` returns the full 2^N Hilbert space (the default and
     the path used by every cross-backend test).
@@ -200,19 +206,44 @@ def run_unitary(
     times: np.ndarray,
     *,
     bubble_lengths: Iterable[int] | None = None,
+    kblock: int | None = None,
+    pblock: int | None = None,
+    sector_tolerance: float = 1.0e-9,
 ) -> DynamicsResult:
-    H, basis = to_quspin(params)
+    """QuSpin closed-system unitary evolution.
+
+    When ``kblock`` and/or ``pblock`` are given the dynamics is performed in
+    a single symmetry sector (translation-by-2 momentum / bond-inversion
+    parity). The initial state must lie in the requested sector — this is
+    checked by computing the norm of its projection and comparing against
+    1 within ``sector_tolerance``. The headline false-vacuum Néel lives in
+    (kblock=0, pblock=+1).
+
+    The full-Hilbert path is the default and is exercised by every cross-
+    backend regression test; the sector path is the speed lever for N ≥ 16.
+    """
     times = np.asarray(times, dtype=np.float64)
 
+    if kblock is None and pblock is None:
+        return _run_unitary_full(params, psi0, times, bubble_lengths)
+    return _run_unitary_sector(
+        params, psi0, times, bubble_lengths,
+        kblock=kblock, pblock=pblock, sector_tolerance=sector_tolerance,
+    )
+
+
+def _run_unitary_full(
+    params: ModelParams,
+    psi0: np.ndarray,
+    times: np.ndarray,
+    bubble_lengths: Iterable[int] | None,
+) -> DynamicsResult:
+    H, basis = to_quspin(params)
     psi_q = _state_quspin_from_numpy(params.N, psi0, basis)
-    # H.evolve handles a vector of times in one call.
-    psi_t = H.evolve(psi_q, times[0], times)
-    # psi_t shape: (dim, n_times)
-    psi_t = np.asarray(psi_t)
+    psi_t = np.asarray(H.evolve(psi_q, times[0], times))
     if psi_t.ndim == 1:
         psi_t = psi_t.reshape(-1, 1)
 
-    # Convert each time slice back to project convention to apply observables.
     diag_m = m_afm_diagonal(params.N)
     bubble_indices: list[int] = []
     diag_b: dict[int, np.ndarray] = {}
@@ -221,17 +252,14 @@ def run_unitary(
             bubble_indices.append(int(L))
             diag_b[int(L)] = sigma_L_diagonal(params.N, int(L))
 
-    # Probabilities indexed by QuSpin's basis position can be re-keyed by
-    # project integer through the same forward permutation.
     perm = _project_to_quspin_perm(params.N, basis)
-
     N_states = 1 << params.N
     m_trace = np.empty(psi_t.shape[1], dtype=np.float64)
     bubbles = {L: np.empty(psi_t.shape[1], dtype=np.float64) for L in bubble_indices}
     for k in range(psi_t.shape[1]):
-        prob_qs = np.abs(psi_t[:, k]) ** 2  # indexed by QuSpin position
+        prob_qs = np.abs(psi_t[:, k]) ** 2
         prob_proj = np.empty(N_states, dtype=np.float64)
-        prob_proj[perm] = prob_qs  # rearrange so prob_proj[i] is amplitude² of project-int i
+        prob_proj[perm] = prob_qs
         m_trace[k] = float(prob_proj @ diag_m)
         for L in bubble_indices:
             bubbles[L][k] = float(prob_proj @ diag_b[L])
@@ -242,4 +270,69 @@ def run_unitary(
         bubble_densities=bubbles if bubbles else None,
         backend="quspin",
         notes=f"full Hilbert space, dim={N_states}",
+    )
+
+
+def _run_unitary_sector(
+    params: ModelParams,
+    psi0: np.ndarray,
+    times: np.ndarray,
+    bubble_lengths: Iterable[int] | None,
+    *,
+    kblock: int | None,
+    pblock: int | None,
+    sector_tolerance: float,
+) -> DynamicsResult:
+    H_sec, b_sec = to_quspin(params, kblock=kblock, pblock=pblock)
+    # Project initial state into the sector basis.
+    # QuSpin's basis.get_proj returns a sparse `dim_full × dim_sector` matrix
+    # P such that v_full = P @ v_sector. Its conjugate-transpose maps the
+    # other way: v_sector = P† @ v_full (orthogonal projection).
+    # To form v_full we re-use the existing project↔QuSpin permutation,
+    # built from the *full* basis ordering for consistency.
+    H_full_view, b_full = to_quspin(params)
+    perm_full = _project_to_quspin_perm(params.N, b_full)
+    psi_full = psi0.astype(np.complex128, copy=False)[perm_full]
+
+    P = b_sec.get_proj(np.complex128)
+    psi_sec = (P.conj().T @ psi_full).astype(np.complex128)
+    norm_sec = float(np.linalg.norm(psi_sec))
+    if abs(norm_sec - 1.0) > sector_tolerance:
+        raise ValueError(
+            f"initial state has norm {norm_sec:.6g} in the (kblock={kblock}, "
+            f"pblock={pblock}) sector — it does not lie purely in this "
+            "sector. Either change the initial state or pick a different "
+            "sector. The Néel false-vacuum lives in (kblock=0, pblock=+1)."
+        )
+
+    psi_t_sec = np.asarray(H_sec.evolve(psi_sec, times[0], times))
+    if psi_t_sec.ndim == 1:
+        psi_t_sec = psi_t_sec.reshape(-1, 1)
+
+    diag_m = m_afm_diagonal(params.N)
+    bubble_indices: list[int] = []
+    diag_b: dict[int, np.ndarray] = {}
+    if bubble_lengths is not None:
+        for L in bubble_lengths:
+            bubble_indices.append(int(L))
+            diag_b[int(L)] = sigma_L_diagonal(params.N, int(L))
+
+    N_states = 1 << params.N
+    m_trace = np.empty(psi_t_sec.shape[1], dtype=np.float64)
+    bubbles = {L: np.empty(psi_t_sec.shape[1], dtype=np.float64) for L in bubble_indices}
+    for k in range(psi_t_sec.shape[1]):
+        psi_full_k = P @ psi_t_sec[:, k]
+        prob_qs = np.abs(psi_full_k) ** 2
+        prob_proj = np.empty(N_states, dtype=np.float64)
+        prob_proj[perm_full] = prob_qs
+        m_trace[k] = float(prob_proj @ diag_m)
+        for L in bubble_indices:
+            bubbles[L][k] = float(prob_proj @ diag_b[L])
+
+    return DynamicsResult(
+        times=times,
+        m_afm=m_trace,
+        bubble_densities=bubbles if bubbles else None,
+        backend="quspin",
+        notes=f"sector kblock={kblock}, pblock={pblock}, dim={b_sec.Ns}",
     )

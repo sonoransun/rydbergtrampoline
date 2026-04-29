@@ -25,6 +25,7 @@ _FIGURES = {
     "resonance": "fig_resonance_scan",
     "bubbles": "fig_bubble_histogram",
     "imperfection": "fig_imperfection_sensitivity",
+    "thermo": "fig_thermodynamic_limit",
 }
 
 
