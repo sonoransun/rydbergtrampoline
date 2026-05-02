@@ -69,13 +69,17 @@ def main(argv: list[str] | None = None) -> int:
         color = cmap(k / max(1, len(args.fidelities) - 1))
         ax.plot(times, m_res, color=color, lw=1.8, label=label)
 
-    ax.set_xlabel("time (μs)")
+    ax.set_xlabel("time  t  (μs)")
     ax.set_ylabel(r"$M_{\mathrm{AFM}}^{\mathrm{res}}(t)$")
-    ax.axhline(0.5, color="k", lw=0.6, ls=":", alpha=0.6)
+    ax.axhline(0.5, color="k", lw=0.6, ls=":", alpha=0.6,
+               label="maximally mixed (1/2)")
     ax.set_title(
-        rf"Sensitivity to initial-state imperfection (N = {args.N}, $\Delta_l = {args.delta_l:g}$ MHz)"
+        rf"Sensitivity to initial-state imperfection  "
+        rf"(N = {args.N}, $\Delta_l$ = {args.delta_l:g} MHz, {args.noise_model})",
+        fontsize=11,
     )
-    ax.legend(loc="best", fontsize=10)
+    ax.legend(loc="upper right", fontsize=10, framealpha=0.85,
+              title="initial state", title_fontsize=9.5)
     style_axes(ax)
     fig.tight_layout()
 

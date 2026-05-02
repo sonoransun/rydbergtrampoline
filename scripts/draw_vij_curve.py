@@ -22,7 +22,7 @@ def main() -> None:
     cutoffs = (1, 2, 4, 8)
     colors = ("#c0392b", "#e67e22", "#16a085", "#2c3e50")
 
-    fig, ax = plt.subplots(figsize=(6.6, 4.2))
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
 
     # The full 1/d^6 ratio (no cutoff) plotted as the underlying truth.
     full_params = ModelParams(N=32, vdW_cutoff=32)
@@ -53,25 +53,42 @@ def main() -> None:
     ax.grid(alpha=0.3, linestyle=":", which="both")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.legend(loc="upper right", fontsize=9, framealpha=0.85, ncols=1)
+    ax.legend(loc="upper right", fontsize=9, framealpha=0.85, ncols=1,
+              title="vdW tail and truncation", title_fontsize=9.5)
 
-    # Annotate the dominant NN-vs-NNN ratio of 64×.
+    # Visualise the NN-vs-NNN gap as a vertical bracket spanning the two values
+    # the eye should be comparing.
+    nn_y = 1.0
+    nnn_y = 1.0 / 64.0
+    bracket_x = 1.5
+    ax.plot([bracket_x, bracket_x], [nnn_y, nn_y], color="#7f8c8d", lw=0.9)
+    ax.plot([bracket_x - 0.05, bracket_x + 0.05], [nn_y, nn_y],
+            color="#7f8c8d", lw=0.9)
+    ax.plot([bracket_x - 0.05, bracket_x + 0.05], [nnn_y, nnn_y],
+            color="#7f8c8d", lw=0.9)
     ax.annotate(
-        r"NN dominates NNN by $2^6 = 64\times$",
-        xy=(2, 1.0 / 64),
-        xytext=(4.5, 0.5),
-        fontsize=9.5,
+        r"NN $\div$ NNN $= 2^6 = 64$",
+        xy=(bracket_x, np.sqrt(nn_y * nnn_y)),
+        xytext=(4.0, 0.25),
+        fontsize=10,
         color="#34495e",
         arrowprops=dict(arrowstyle="->", color="#7f8c8d", lw=0.8),
     )
 
+    ax.text(
+        13.5, 1e-7,
+        r"each truncated curve drops to $V \approx 0$ for $d > R$",
+        fontsize=8.5, color="#7f8c8d", ha="right", style="italic",
+    )
+
     ax.set_title(
-        r"Van-der-Waals tail $V_{ij} \propto 1/d^6$ and the vdW_cutoff truncation"
+        r"Pair coupling $V_{ij} / V_{\mathrm{NN}}$ vs site separation $d$  "
+        r"(log scale)"
     )
 
     fig.tight_layout()
     out_path = out_dir / "vij_curve.png"
-    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"wrote {out_path}")
 
 

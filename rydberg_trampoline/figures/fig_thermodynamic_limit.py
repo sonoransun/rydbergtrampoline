@@ -31,8 +31,8 @@ from rydberg_trampoline.model import ModelParams
 def main(argv: list[str] | None = None) -> int:
     parser = common_argparser(__doc__)
     parser.add_argument("--delta-l", type=float, default=2.0)
-    parser.add_argument("--t-max", type=float, default=2.5)
-    parser.add_argument("--n-times", type=int, default=51)
+    parser.add_argument("--t-max", type=float, default=5.0)
+    parser.add_argument("--n-times", type=int, default=101)
     parser.add_argument("--chi", type=int, default=80)
     args = parser.parse_args(argv)
 
@@ -43,27 +43,38 @@ def main(argv: list[str] | None = None) -> int:
     res_n8 = run_unitary(base.with_(N=8), times, backend=args.backend)
     res_n12 = run_unitary(base.with_(N=12), times, backend=args.backend)
 
-    fig, ax = plt.subplots(figsize=(7.0, 4.5))
+    fig, ax = plt.subplots(figsize=(7.4, 4.7))
     ax.plot(times, res_n8.m_afm, color="#34495e", lw=1.6, label="ED, N = 8")
     ax.plot(times, res_n12.m_afm, color="#16a085", lw=1.6, label="ED, N = 12")
     try:
         res_itebd = run_itebd(base, times, chi=args.chi)
         ax.plot(times, res_itebd.m_afm, color="#c0392b", lw=2.0, ls="--",
-                label=f"iTEBD, N → ∞ (χ = {args.chi})")
+                label=fr"iTEBD, $N \to \infty$ ($\chi$ = {args.chi})")
         itebd_note = f"iTEBD chi={args.chi}"
     except ModuleNotFoundError:
         itebd_note = "iTEBD skipped (TeNPy not installed)"
         ax.text(0.5, 0.05, itebd_note, transform=ax.transAxes,
                 ha="center", color="#c0392b")
 
-    ax.set_xlabel("time (μs)")
+    # Identify where the N=8 trace first noticeably separates from N=12 — used
+    # to draw a vertical guideline highlighting the finite-size onset.
+    diff = np.abs(res_n8.m_afm - res_n12.m_afm)
+    onset_mask = diff > 0.02
+    if onset_mask.any():
+        t_onset = times[np.argmax(onset_mask)]
+        ax.axvline(t_onset, color="#7f8c8d", lw=0.8, ls=":")
+        ax.text(t_onset + 0.05, ax.get_ylim()[1] if False else 0.92,
+                f"N=8 light cone\nreaches boundary  (t ≈ {t_onset:.1f} μs)",
+                fontsize=9, color="#34495e", va="top")
+
+    ax.set_xlabel("time  t  (μs)")
     ax.set_ylabel(r"$\langle M_{\mathrm{AFM}}\rangle(t)$")
     ax.set_title(
-        rf"Finite-N ED vs iTEBD on the staggered Rydberg ring "
-        rf"($\Delta_l$ = {args.delta_l:g} MHz, NN-only)"
+        r"Finite-N ED vs iTEBD ($N \to \infty$) on the staggered Rydberg ring  "
+        rf"($\Delta_l$ = {args.delta_l:g} MHz, NN-only vdW)"
     )
-    ax.set_ylim(-0.15, 1.05)
-    ax.legend(loc="best", fontsize=10)
+    ax.set_ylim(-0.55, 1.05)
+    ax.legend(loc="lower left", fontsize=10)
     style_axes(ax)
     fig.tight_layout()
 

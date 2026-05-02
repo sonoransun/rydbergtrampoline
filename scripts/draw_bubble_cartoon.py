@@ -75,12 +75,23 @@ def main() -> None:
     _draw_row(ax, y=0.0, occ=row3, bubble_span=(4, 6),
               label="length-3\nbubble")
 
-    # Domain-wall arrows on row 3.
-    ax.annotate("domain wall", xy=(3.5, 0.0), xytext=(2.5, -1.4),
-                fontsize=9, color="#16a085", ha="center",
+    # Domain walls live on the BONDS where two neighbours both share the same
+    # occupation (kinks in the alternation). Mark each with a vertical hash so
+    # the reader can see *where* the alternation breaks; the arrow + label then
+    # explains what the marker means.
+    for x_dw in (3.5, 6.5):
+        ax.plot([x_dw, x_dw], [-0.5, 0.5], color="#16a085", lw=2.6, zorder=4)
+        ax.plot([x_dw - 0.10, x_dw + 0.10], [0.5, 0.5],
+                color="#16a085", lw=2.0, zorder=4)
+        ax.plot([x_dw - 0.10, x_dw + 0.10], [-0.5, -0.5],
+                color="#16a085", lw=2.0, zorder=4)
+    ax.annotate("domain wall\n(bond between\ntwo equal $n$)",
+                xy=(3.5, -0.55), xytext=(2.0, -1.6),
+                fontsize=8.5, color="#16a085", ha="center",
                 arrowprops=dict(arrowstyle="->", color="#16a085", lw=0.8))
-    ax.annotate("domain wall", xy=(6.5, 0.0), xytext=(7.5, -1.4),
-                fontsize=9, color="#16a085", ha="center",
+    ax.annotate("domain wall",
+                xy=(6.5, -0.55), xytext=(8.0, -1.6),
+                fontsize=8.5, color="#16a085", ha="center",
                 arrowprops=dict(arrowstyle="->", color="#16a085", lw=0.8))
 
     # Legend.
@@ -121,7 +132,7 @@ def main() -> None:
 
     fig.tight_layout()
     out_path = out_dir / "bubble_cartoon.png"
-    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"wrote {out_path}")
 
 

@@ -71,14 +71,33 @@ def main(argv: list[str] | None = None) -> int:
     style_axes(ax)
 
     ax = axes[1]
-    ax.plot(deltas, bubble_avg, "o-", color="#16a085", lw=1.2)
-    ax.set_xlabel(r"$\Delta_l$  (MHz)")
-    ax.set_ylabel(r"$\langle \Sigma_1 + \Sigma_2 + \Sigma_3 \rangle_t$")
+    ax.plot(deltas, bubble_avg, "o-", color="#16a085", lw=1.2,
+            label=r"$\langle \Sigma_1 + \Sigma_2 + \Sigma_3 \rangle_t$")
+    ax.set_xlabel(r"staggered field  $\Delta_l$  (MHz)")
+    ax.set_ylabel(r"time-avg bubble density")
+    ax.legend(loc="upper left", fontsize=10)
     style_axes(ax)
 
+    # Light-grey vertical guides on both panels at any local maxima of Γ
+    # (resonance peaks) — visually links the two panels.
+    if smooth_fit.success and valid.sum() >= 5:
+        gammas_v = gammas[valid]
+        deltas_v = deltas[valid]
+        smooth_curve = smooth_fit.A * np.exp(-smooth_fit.B / deltas_v)
+        residual = gammas_v - smooth_curve
+        # Crude peak detection: positive residual that is locally maximal.
+        for i in range(1, len(residual) - 1):
+            if (residual[i] > residual[i - 1]
+                    and residual[i] > residual[i + 1]
+                    and residual[i] > 0.05 * gammas_v.max()):
+                for axx in axes:
+                    axx.axvline(deltas_v[i], color="#7f8c8d", lw=0.6, ls=":",
+                                alpha=0.5, zorder=0)
+
     fig.suptitle(
-        rf"Resonance scan: deviations from $\Gamma = A e^{{-B/\Delta_l}}$ "
-        rf"signal discrete-spectrum bubble channels (N = {args.N})"
+        r"Resonance scan: $\Gamma$ vs $\Delta_l$ and the corresponding "
+        rf"bubble density (N = {args.N})",
+        fontsize=11,
     )
     fig.tight_layout()
 

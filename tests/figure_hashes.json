@@ -1,12 +1,13 @@
 {
-  "bubble_cartoon.png": "ea6ad96ad5238585",
-  "fig_bubble_histogram.png": "bed0e13f856bc442",
-  "fig_decay_traces.png": "aa6c3f856361313d",
-  "fig_gamma_vs_inv_delta.png": "be1f7e4b60716038",
-  "fig_imperfection_sensitivity.png": "ca5a4e63b1b86437",
-  "fig_resonance_scan.png": "af686e4f4c1d2519",
-  "fig_thermodynamic_limit.png": "c2497f4e2631747c",
-  "hilbert_dim_vs_N.png": "e890ff69b22d6449",
-  "level_scheme.png": "bf66511b3249c82f",
-  "vij_curve.png": "da5a7aa5301c6c57"
+  "bubble_cartoon.png": "ea4bd86ad5238595",
+  "fig_bubble_histogram.png": "bec1e31f8562943a",
+  "fig_decay_traces.png": "aa6e3f9d41617138",
+  "fig_gamma_vs_inv_delta.png": "ba1e7e4e6132e834",
+  "fig_imperfection_sensitivity.png": "ca5a4f67b1186633",
+  "fig_resonance_scan.png": "827e6f487f99a019",
+  "fig_thermodynamic_limit.png": "ae603f17621bd316",
+  "hilbert_dim_vs_N.png": "c0907f7bf64d204b",
+  "level_scheme.png": "9b30a4496d2e2f3d",
+  "ring_geometry.png": "bd6cf22dcb0c0c33",
+  "vij_curve.png": "ca5a6aa1394c6c77"
 }

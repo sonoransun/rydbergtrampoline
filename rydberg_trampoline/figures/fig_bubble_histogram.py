@@ -44,20 +44,30 @@ def main(argv: list[str] | None = None) -> int:
         res = run_unitary(params, times, backend=args.backend, bubble_lengths=[1, 2, 3])
         bubble_means[label] = {L: float(np.mean(res.bubble_densities[L])) for L in (1, 2, 3)}
 
-    fig, ax = plt.subplots(figsize=(6.5, 4.0))
+    fig, ax = plt.subplots(figsize=(7.0, 4.4))
     Ls = np.array([1, 2, 3])
     width = 0.38
     off = np.array([bubble_means["off-resonance"][L] for L in Ls])
     on = np.array([bubble_means["on-resonance"][L] for L in Ls])
     ax.bar(Ls - width / 2, off, width=width, color="#34495e",
-           label=fr"$\Delta_l = {args.off_resonance:g}$ MHz (off)")
+           label=fr"off-resonance  $\Delta_l = {args.off_resonance:g}$ MHz")
     ax.bar(Ls + width / 2, on, width=width, color="#e67e22",
-           label=fr"$\Delta_l = {args.on_resonance:g}$ MHz (on)")
+           label=fr"on-resonance   $\Delta_l = {args.on_resonance:g}$ MHz")
+    # Numeric values atop each bar so the L=2,3 bars don't get lost by eye.
+    for x, h in zip(Ls - width / 2, off):
+        ax.text(x, h + 0.01, f"{h:.2f}", ha="center", fontsize=8.5, color="#34495e")
+    for x, h in zip(Ls + width / 2, on):
+        ax.text(x, h + 0.01, f"{h:.2f}", ha="center", fontsize=8.5, color="#e67e22")
     ax.set_xticks(Ls)
-    ax.set_xlabel("bubble length L")
-    ax.set_ylabel(r"time-averaged $\langle \Sigma_L \rangle_t$")
-    ax.set_title(f"Bubble-length distribution (N = {args.N})")
-    ax.legend(loc="best", fontsize=10)
+    ax.set_xticklabels([f"L = {L}" for L in Ls])
+    ax.set_xlabel("bubble length")
+    ax.set_ylabel(r"time-averaged density  $\langle \Sigma_L \rangle_t$")
+    ax.set_title(
+        f"Bubble-length distribution: off- vs on-resonance  (N = {args.N})",
+        fontsize=11,
+    )
+    ax.legend(loc="upper right", fontsize=10, framealpha=0.85)
+    ax.set_ylim(0, max(off.max(), on.max()) * 1.18)
     style_axes(ax)
     fig.tight_layout()
 

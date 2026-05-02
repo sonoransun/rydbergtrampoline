@@ -53,8 +53,9 @@ def main(argv: list[str] | None = None) -> int:
     valid = np.isfinite(gammas) & (gammas > 0)
     fit = fit_tunneling_action(deltas[valid], gammas[valid])
 
-    fig, ax = plt.subplots(figsize=(6.5, 4.5))
-    ax.scatter(1.0 / deltas[valid], gammas[valid], s=40, color="#2c3e50", zorder=3)
+    fig, ax = plt.subplots(figsize=(7.0, 4.7))
+    ax.scatter(1.0 / deltas[valid], gammas[valid], s=42, color="#2c3e50",
+               zorder=3, label=r"$\Gamma(\Delta_l)$ from $M_{\mathrm{AFM}}^{\mathrm{res}}(t)$")
     grid = np.linspace(deltas.min() * 0.95, deltas.max() * 1.05, 200)
     if fit.success:
         ax.plot(
@@ -62,17 +63,26 @@ def main(argv: list[str] | None = None) -> int:
             fit.A * np.exp(-fit.B / grid),
             color="#c0392b",
             lw=2,
-            label=fr"fit: $\Gamma = {fit.A:.3f} \, e^{{-{fit.B:.2f} / \Delta_l}}$",
+            label=fr"fit  $\Gamma = {fit.A:.3f}\,e^{{-{fit.B:.2f} / \Delta_l}}$",
         )
     overlay_experimental(ax, "fig3_gamma", x="inv_delta_l", y="gamma_per_us")
     ax.set_yscale("log")
-    ax.set_xlabel(r"$1 / \Delta_l$  (1/MHz)")
-    ax.set_ylabel(r"decay rate $\Gamma$  (1/μs)")
+    ax.set_xlabel(r"$1 / \Delta_l$  (1/MHz)   $\;\;\to$  smaller $\Delta_l$, deeper false vacuum")
+    ax.set_ylabel(r"decay rate  $\Gamma$  (1/μs)")
     ax.set_title(
-        rf"False-vacuum decay rate vs $1/\Delta_l$ "
-        rf"(N = {args.N}, closed system, {args.backend})"
+        rf"False-vacuum decay rate vs $1/\Delta_l$  "
+        rf"(N = {args.N}, closed system, {args.backend})",
+        fontsize=11,
     )
-    ax.legend(loc="lower left", fontsize=10)
+    ax.legend(loc="upper right", fontsize=10, framealpha=0.85)
+    # Annotate that downward deviations from the fit signal extra suppression
+    # while upward deviations signal resonant enhancement.
+    ax.text(
+        0.02, 0.02,
+        "deviations above the line ⇒ resonant nucleation\n(discrete-spectrum bubble channels)",
+        transform=ax.transAxes, fontsize=8.5, color="#7f8c8d",
+        ha="left", va="bottom", style="italic",
+    )
     style_axes(ax)
     fig.tight_layout()
 

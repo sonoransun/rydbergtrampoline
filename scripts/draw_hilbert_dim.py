@@ -63,7 +63,7 @@ def main() -> None:
         sector_exact.append(d if d is not None else 2.0 ** int(N) / max(1, int(N) // 2))
     sector_estimate_full = np.where(N_full >= 2, 2.0 ** N_full / np.maximum(1, N_full // 2), np.nan)
 
-    fig, ax = plt.subplots(figsize=(7.0, 4.6))
+    fig, ax = plt.subplots(figsize=(7.4, 4.8))
     ax.plot(N_full, full, "-", color="#34495e", lw=1.8,
             label=r"full Hilbert  $2^N$  (numpy / qutip / quspin)")
     ax.plot(N_quspin, sector_exact, "o", color="#16a085", ms=6,
@@ -83,23 +83,30 @@ def main() -> None:
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # Hard-cap markers.
-    ax.axvline(NUMPY_LINDBLAD_MAX_N, color="#c0392b", lw=0.9, ls="--", alpha=0.55)
-    ax.text(NUMPY_LINDBLAD_MAX_N - 0.1, 1.0e8, "Lindblad\ncap", color="#c0392b",
-            fontsize=8, ha="right", va="center")
-    ax.axvline(NUMPY_ED_MAX_N, color="#34495e", lw=0.9, ls="--", alpha=0.55)
-    ax.text(NUMPY_ED_MAX_N - 0.1, 1.0e10, "numpy ED\ncap", color="#34495e",
-            fontsize=8, ha="right", va="center")
-    ax.axvline(24, color="black", lw=0.9, ls=":", alpha=0.6)
-    ax.text(24 + 0.15, 1.0e12, "paper N=24", color="black",
-            fontsize=8, ha="left", va="center")
+    # Hard-cap markers — a vertical line annotated at a y-position chosen to sit
+    # in clear space (above iTEBD's flat blue line, below the Lindblad curve).
+    cap_specs = [
+        (NUMPY_LINDBLAD_MAX_N, f"Lindblad cap  (N={NUMPY_LINDBLAD_MAX_N})", "#c0392b", 1e9),
+        (NUMPY_ED_MAX_N,       f"numpy ED cap  (N={NUMPY_ED_MAX_N})",       "#34495e", 1e9),
+        (24,                   "paper target  (N=24)",                     "black",   1e9),
+    ]
+    for x, label, color, y in cap_specs:
+        ax.axvline(x, color=color, lw=0.9, ls="--", alpha=0.55)
+        ax.text(
+            x - 0.18, y, label,
+            color=color, fontsize=9, ha="right", va="center", rotation=90,
+            bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.85),
+        )
 
-    ax.legend(loc="lower right", fontsize=8.5, framealpha=0.85)
-    ax.set_title("Memory cost vs ring size for each backend")
+    ax.legend(loc="lower right", fontsize=9, framealpha=0.85)
+    ax.set_title(
+        "Memory cost vs ring size N for each backend  (log scale; lower = laptop-friendly)",
+        fontsize=11,
+    )
 
     fig.tight_layout()
     out_path = out_dir / "hilbert_dim_vs_N.png"
-    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"wrote {out_path}")
 
 

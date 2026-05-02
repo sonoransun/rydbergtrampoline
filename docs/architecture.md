@@ -58,7 +58,7 @@ sequenceDiagram
     participant U as user
     participant D as dynamics.run_unitary
     participant R as backends.require_backend
-    participant E as <backend>.to_*
+    participant E as backend.to_H_emitter
     participant S as solver
     participant O as observables.m_afm
     U->>D: run_unitary(params, times, backend=...)

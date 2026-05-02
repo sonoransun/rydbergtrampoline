@@ -117,14 +117,23 @@ the deeper one is the "true vacuum", and small contiguous flipped runs
 ```mermaid
 stateDiagram-v2
     direction LR
+    classDef vacuum fill:#ecf0f1,stroke:#2c3e50,color:#2c3e50,font-weight:bold;
+    classDef bubble fill:#fdf2e9,stroke:#e67e22,color:#a04000;
+
     FV: False vacuum<br/>Néel n=(1,0,1,0,...)
     B1: Length-1 bubble<br/>seed nucleation
     B2: Length-2 bubble<br/>resonant channel
     TV: True vacuum<br/>opposite Néel
+
     FV --> B1: tunnel under barrier
     B1 --> B2: bubble grows
     B2 --> TV: domain wall propagation
-    FV --> TV: direct (suppressed)
+    FV --> TV: direct (exp. suppressed)
+
+    class FV vacuum
+    class TV vacuum
+    class B1 bubble
+    class B2 bubble
 ```
 
 *Tunneling pathway from the false-vacuum Néel through length-1 and length-2 bubble configurations to the opposite-Néel true vacuum. The direct FV → TV arrow is exponentially suppressed and proceeds via the bubble sequence.*
@@ -143,20 +152,12 @@ through `0` (mixed) as the system tunnels.
 ## Lattice and computation diagrams
 
 A 16-site ring with the staggered detuning highlighted by alternate
-colours:
+colours; the package's `Geometry.RING` corresponds exactly to this
+periodic-boundary geometry:
 
-```mermaid
-graph LR
-    classDef even fill:#3498db,stroke:#2c3e50,color:#fff;
-    classDef odd fill:#e67e22,stroke:#2c3e50,color:#fff;
-    s0((0)):::even --- s1((1)):::odd --- s2((2)):::even --- s3((3)):::odd
-    s3 --- s4((4)):::even --- s5((5)):::odd --- s6((6)):::even --- s7((7)):::odd
-    s7 --- s8((8)):::even --- s9((9)):::odd --- s10((10)):::even --- s11((11)):::odd
-    s11 --- s12((12)):::even --- s13((13)):::odd --- s14((14)):::even --- s15((15)):::odd
-    s15 -. periodic .- s0
-```
+![A 16-site Rydberg ring with even sites coloured blue and odd sites coloured orange, NN bonds drawn as the polygon edges, and a dotted longer-range bond illustrating the 1/r^6 vdW tail](docs/figures/ring_geometry.png)
 
-*16-site Rydberg ring. Blue (even) sites carry detuning −Δ_g + Δ_l; orange (odd) sites carry −Δ_g − Δ_l. The dotted edge closes the periodic ring boundary.*
+*16-site Rydberg ring with periodic boundary conditions. Even (blue) sites carry detuning $-\Delta_g + \Delta_l$, odd (orange) sites carry $-\Delta_g - \Delta_l$. NN bonds are the polygon edges; the dotted segment shows a representative longer-range $V_{ij}\propto |i-j|^{-6}$ coupling.*
 
 End-to-end pipeline from `ModelParams` through backend-specific solvers
 to a hero figure (Krylov = `scipy.sparse.linalg.expm_multiply`;
@@ -165,20 +166,27 @@ respectively):
 
 ```mermaid
 flowchart LR
-    P["ModelParams<br/>N, Ω, Δ_g, Δ_l, V_NN, T1, T2*"] --> S{Backend?}
-    S -->|numpy| H1[scipy.sparse H]
-    S -->|qutip| H2[qutip.Qobj H]
-    S -->|quspin| H3[QuSpin hamiltonian]
-    S -->|tenpy| H4[2-site iMPO + iMPS]
-    H1 --> E[Krylov exp_multiply]
-    H2 --> M[mesolve / mcsolve]
+    classDef input fill:#ecf0f1,stroke:#2c3e50,color:#2c3e50;
+    classDef ham fill:#fdf2e9,stroke:#e67e22,color:#a04000;
+    classDef solver fill:#d5f5e3,stroke:#16a085,color:#0e6655;
+    classDef obs fill:#fadbd8,stroke:#c0392b,color:#922b21;
+
+    P["ModelParams<br/>N, Ω, Δ_g, Δ_l,<br/>V_NN, T1, T2*"]:::input --> S{Backend?}
+    S -->|numpy| H1[scipy.sparse H]:::ham
+    S -->|qutip| H2[qutip.Qobj H]:::ham
+    S -->|quspin| H3[QuSpin hamiltonian]:::ham
+    S -->|tenpy| H4[2-site iMPO + iMPS]:::ham
+
+    H1 --> E[Krylov exp_multiply]:::solver
     H3 --> E
-    H4 --> T[TEBDEngine]
-    E --> O["M_AFM, Σ_L"]
+    H2 --> M[mesolve / mcsolve]:::solver
+    H4 --> T[TEBDEngine]:::solver
+
+    E --> O["M_AFM(t), Σ_L(t)"]:::obs
     M --> O
     T --> O
-    O --> A[fit_decay_rate → Γ]
-    A --> F[fig_*.py → PNG]
+    O --> A[fit_decay_rate → Γ]:::obs
+    A --> F[fig_*.py → PNG]:::obs
 ```
 
 *Each backend emits its native Hamiltonian object, hands it to a backend-appropriate solver, and converges on the shared `M_AFM` / `Σ_L` observable evaluator before fitting Γ.*
@@ -263,13 +271,13 @@ available via `--noise-model haar`.
 
 ### Finite-N ED vs iTEBD (this package)
 
-![Closed-system M_AFM(t) at fixed Δ_l for N=8 ED, N=12 ED, and iTEBD (N→∞) with NN-only vdW, showing finite-size light-cone separation around t≈2 μs](docs/figures/fig_thermodynamic_limit.png)
+![Closed-system M_AFM(t) at fixed Δ_l for N=8 ED, N=12 ED, and iTEBD (N→∞) with NN-only vdW, showing finite-size light-cone separation around t ≈ 2.7 μs](docs/figures/fig_thermodynamic_limit.png)
 
-*N=8 ED, N=12 ED, and iTEBD (N→∞) at NN-only vdW. The N=8 trace separates from N=12 and iTEBD around t ≈ 2 μs once the light cone reaches the ring boundary.*
+*N=8 ED, N=12 ED, and iTEBD (N→∞) at NN-only vdW. The three curves coincide until the N=8 light cone reaches the ring boundary near t ≈ 2.7 μs; from there the N=8 trace decouples while the N=12 and iTEBD curves keep tracking each other.*
 
 Closed-system M_AFM(t) at the same Δ_l for N=8 ED, N=12 ED, and iTEBD
 (N → ∞) with NN-only vdW. The three curves overlap at short times and
-the finite-N=8 trace separates from N=12 and iTEBD around t ≈ 2 μs as
+the finite-N=8 trace separates from N=12 and iTEBD around t ≈ 2.7 μs as
 the boundary makes itself felt. Useful both as a backend showcase and
 as a figure-level cross-check for the iTEBD ↔ ED short-time agreement.
 

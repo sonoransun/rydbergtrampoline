@@ -55,14 +55,26 @@ def main(argv: list[str] | None = None) -> int:
         ax.plot(times, m_res, color=color, label=f"Δ$_l$ = {dl:g} MHz")
 
     overlay_experimental(ax, "fig2_decay", x="time_us", y="m_afm_res")
-    ax.set_xlabel("time (μs)")
+    ax.set_xlabel("time  t  (μs)")
     ax.set_ylabel(r"$M_{\mathrm{AFM}}^{\mathrm{res}}(t)$")
-    ax.axhline(0.5, color="k", lw=0.7, ls=":", alpha=0.6, label="maximally mixed")
+    ax.axhline(0.5, color="k", lw=0.7, ls=":", alpha=0.6, label="maximally mixed (1/2)")
+    # Vertical annotations for the two limiting values of M^res, anchored on
+    # the y-axis so they don't collide with the legend.
+    ax.text(0.015, 0.98, "false vacuum  (1)",
+            transform=ax.transAxes,
+            fontsize=8.5, color="#7f8c8d", ha="left", va="top", style="italic")
+    ax.text(0.015, 0.50,
+            "fully mixed  (1/2)",
+            transform=ax.transAxes,
+            fontsize=8.5, color="#7f8c8d", ha="left", va="center", style="italic")
     ax.set_ylim(0.0, 1.05)
     ax.set_xlim(0.0, args.t_max)
-    ax.legend(loc="upper right", ncols=2, fontsize=8, framealpha=0.85)
+    ax.legend(loc="upper right", ncols=2, fontsize=9, framealpha=0.85,
+              title=r"$\Delta_l$ sweep", title_fontsize=9)
     ax.set_title(
-        f"Rescaled M$_{{AFM}}$ decay from the false-vacuum Néel (N = {N}, T$_1$ = 28 μs, T$_2^*$ = 3.8 μs)"
+        rf"Rescaled $M_{{\mathrm{{AFM}}}}^{{\mathrm{{res}}}}(t)$ decay from the Néel "
+        rf"false vacuum  (N = {N}, T$_1$ = 28 μs, T$_2^*$ = 3.8 μs)",
+        fontsize=11,
     )
     style_axes(ax)
     fig.tight_layout()
