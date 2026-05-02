@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-29T00:33:12.007319+00:00",
+  "generated_at": "2026-05-02T00:14:37.883456+00:00",
   "stem": "fig_decay_traces",
   "params": {
-    "N": 6,
+    "N": 10,
     "delta_l": [
       0.5,
       1.0,

@@ -36,10 +36,7 @@ flowchart LR
     action --> F2
 ```
 
-The flow reads left-to-right: physics concepts (blue) become Hamiltonian
-terms (orange), which produce observables (green), which appear in the
-hero figures (red). Tracing any figure backward to its physical
-ingredient is one hop per arrow.
+*Concept map: physics objects (blue) → Hamiltonian terms (orange) → observables (green) → hero figures (red). Tracing any figure backward to its physical ingredient is one hop per arrow.*
 
 ## 1. False vacua and Coleman bounces
 
@@ -149,7 +146,9 @@ al.: 1D ring with a staggered detuning,
   contribution (NNN smaller by 64) and provides the effective
   repulsion that makes the bubbles cohesive.
 
-  ![V_ij vs distance](figures/vij_curve.png)
+  ![Pair coupling V_ij versus site separation. Each curve marks a vdW_cutoff = R truncation; R = 1 is the iTEBD path, R = 8 is the ED default, capturing essentially all of the 1/r^6 tail energy](figures/vij_curve.png)
+
+  *Two-body coupling V<sub>ij</sub> = C₆/|i−j|<sup>6</sup> with the four `vdW_cutoff` thresholds. iTEBD must use R=1 (TEBD locality); ED defaults to R=8.*
 
   Each coloured curve shows where the package's `vdW_cutoff = R`
   argument truncates the tail. The TeNPy iTEBD backend uses `R = 1`
@@ -200,7 +199,9 @@ of magnitude.
 
 What the bubble looks like, concretely:
 
-![Bubble cartoon](figures/bubble_cartoon.png)
+![Three-row cartoon: top, false-vacuum Néel; middle, a single flipped site (length-1 bubble); bottom, a length-3 bubble with two domain walls at the boundaries](figures/bubble_cartoon.png)
+
+*The Σ_L bubble-density operator counts contiguous L-flipped runs bordered by FV sites; the highlighted boundaries are the domain walls.*
 
 Top row: the metastable false-vacuum Néel. Middle row: a single-flip
 "bubble" — one site has flipped to its true-vacuum value, bordered on
@@ -239,9 +240,11 @@ meaningful.
 
 ## References
 
-* [coleman77]: S. Coleman, *Fate of the False Vacuum*, Phys. Rev. D **15**, 2929 (1977).
-  <https://doi.org/10.1103/PhysRevD.15.2929>
-* [higgs-decay]: G. Degrassi et al., *Higgs mass and vacuum stability in the Standard Model at NNLO*, JHEP **08**, 098 (2012).
-* [bernien17]: H. Bernien et al., *Probing many-body dynamics on a 51-atom quantum simulator*, Nature **551**, 579 (2017).
-* Chao et al., *Probing False Vacuum Decay and Bubble Nucleation in a Rydberg Atom Array*, PRL **136**, 120407 (2026) —
-  [arXiv:2512.04637](https://arxiv.org/abs/2512.04637).
+* S. Coleman, *Fate of the False Vacuum*, Phys. Rev. D **15**, 2929 (1977). <https://doi.org/10.1103/PhysRevD.15.2929>
+* G. Degrassi et al., *Higgs mass and vacuum stability in the Standard Model at NNLO*, JHEP **08**, 098 (2012). <https://doi.org/10.1007/JHEP08(2012)098>
+* H. Bernien et al., *Probing many-body dynamics on a 51-atom quantum simulator*, Nature **551**, 579 (2017). <https://doi.org/10.1038/nature24622>
+* Chao et al., *Probing False Vacuum Decay and Bubble Nucleation in a Rydberg Atom Array*, PRL **136**, 120407 (2026) — [arXiv:2512.04637](https://arxiv.org/abs/2512.04637).
+
+[coleman77]: https://doi.org/10.1103/PhysRevD.15.2929
+[higgs-decay]: https://doi.org/10.1007/JHEP08(2012)098
+[bernien17]: https://doi.org/10.1038/nature24622

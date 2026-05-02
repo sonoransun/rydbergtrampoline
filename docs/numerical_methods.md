@@ -8,7 +8,9 @@ covers data flow / module structure) and [`background.md`](background.md)
 
 ## Memory cost vs ring size
 
-![Hilbert dim vs N](figures/hilbert_dim_vs_N.png)
+![Hilbert-space dimension versus N showing 2^N closed-system, 4^N Lindblad, sector-divided, and N-independent iTEBD curves with each backend's hard-cap marker](figures/hilbert_dim_vs_N.png)
+
+*Memory cost in complex doubles as N grows. Each backend's hard cap is annotated; cross any line and you are out of laptop RAM.*
 
 Rough rule of thumb:
 
@@ -172,6 +174,8 @@ flowchart TD
     K -->|yes, real Rydberg| L[bloqade<br/>device=cloud]:::cloud
     K -->|emulator only| M[bloqade<br/>device=emulator]:::cloud
 ```
+
+*Pick the leaf that matches your regime: open-system at small N → `qutip mesolve`; large closed-system N → `numpy` Krylov or `quspin kblock=0`; thermodynamic limit → `tenpy iTEBD`; analog Rydberg → `bloqade`.*
 
 ## Accuracy regime table
 

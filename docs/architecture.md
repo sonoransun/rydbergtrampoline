@@ -73,6 +73,8 @@ sequenceDiagram
     D-->>U: DynamicsResult(times, m_afm, ...)
 ```
 
+*`run_unitary` call flow. Backend imports are checked first, the per-backend Hamiltonian emitter is invoked, the appropriate solver evolves the state, and observables are projected centrally so every backend returns the same `DynamicsResult` shape.*
+
 The bloqade path is the only one that is shot-statistical: each timepoint is
 its own program submitted to the emulator (or to QuEra Aquila), and the
 "state(s) at each time" arrow above is replaced by a `(n_shots, N)` array
@@ -149,6 +151,8 @@ classDiagram
     tenpy_backend ..> DynamicsResult
     bloqade_backend ..> DynamicsResult
 ```
+
+*`ModelParams` is the single physics-spec input consumed by all five backends; `DynamicsResult` is the lowest-common-denominator output. Adding a backend means extending the `BackendName` Literal in one place.*
 
 `ModelParams` is the *only* physics specification — all five backends
 consume it unchanged. `DynamicsResult` is the lowest common denominator
