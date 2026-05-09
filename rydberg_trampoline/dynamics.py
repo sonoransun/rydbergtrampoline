@@ -63,6 +63,8 @@ def run_unitary(
     device: str = "emulator",
     i_understand_this_costs_money: bool = False,
     seed: int | None = None,
+    psi0_protocol: str = "ground",
+    prep_ramp=None,
 ) -> DynamicsResult:
     """Closed-system unitary evolution under :class:`ModelParams`.
 
@@ -92,8 +94,27 @@ def run_unitary(
         (default) runs the in-process emulator; ``device='cloud'`` submits
         a paid task to QuEra Aquila on AWS Braket and requires
         ``i_understand_this_costs_money=True``. The bloqade path can only
-        start from the all-ground ``|gg…g⟩`` state — see
+        start from the all-ground ``|gg…g⟩`` state by default — see
         :func:`rydberg_trampoline.backends.bloqade_backend.run_unitary_async`.
+    psi0_protocol, prep_ramp
+        Honoured only by the ``bloqade`` backend. ``psi0_protocol='ground'``
+        (default) preserves the historical |gg…g⟩-only contract.
+        ``psi0_protocol='neel_via_ramp'`` prepends an adiabatic Z2-prep
+        ramp so the program lands in the false-vacuum Néel before evolution.
+        ``prep_ramp`` may override the default
+        :class:`~rydberg_trampoline.backends.bloqade_backend.NeelPrepRamp`
+        parameters; ``None`` uses sensible defaults.
+
+    Examples
+    --------
+    Closed-system run from the false-vacuum Néel::
+
+        >>> import numpy as np
+        >>> from rydberg_trampoline import ModelParams, run_unitary
+        >>> params = ModelParams(N=8, Delta_l=2.0)
+        >>> res = run_unitary(params, np.linspace(0, 1, 11))
+        >>> res.backend
+        'numpy'
     """
     require_backend(backend)
     if (kblock is not None or pblock is not None) and backend != "quspin":
@@ -137,14 +158,17 @@ def run_unitary(
         raise ValueError("tenpy backend is for run_itebd, not run_unitary on finite N")
 
     if backend == "bloqade":
-        # Bloqade can only start from |gg...g⟩, so we forward psi0 (which may
-        # be None — the bloqade backend treats that as the Aquila default)
-        # rather than the Néel-defaulted psi_init the other backends use.
+        # Bloqade can only start from |gg...g⟩ (or a Néel prepared by an
+        # adiabatic ramp via psi0_protocol='neel_via_ramp'), so we forward
+        # psi0 unchanged (None means the protocol's default) rather than
+        # the Néel-defaulted psi_init the other backends use.
         from rydberg_trampoline.backends.bloqade_backend import run_unitary as _run
         return _run(
             params,
             psi0,                       # forward None unchanged; bloqade validates
             times,
+            psi0_protocol=psi0_protocol,
+            prep_ramp=prep_ramp,
             n_shots=n_shots,
             device=device,
             i_understand_this_costs_money=i_understand_this_costs_money,
@@ -160,6 +184,8 @@ async def run_unitary_async(
     times: np.ndarray | Sequence[float],
     *,
     psi0: np.ndarray | None = None,
+    psi0_protocol: str = "ground",
+    prep_ramp=None,
     n_shots: int = 1000,
     device: str = "emulator",
     i_understand_this_costs_money: bool = False,
@@ -183,6 +209,8 @@ async def run_unitary_async(
         params,
         times,
         psi0=psi0,                      # forward as-is; bloqade validates None / |gg...g⟩
+        psi0_protocol=psi0_protocol,
+        prep_ramp=prep_ramp,
         n_shots=n_shots,
         device=device,
         i_understand_this_costs_money=i_understand_this_costs_money,
@@ -210,6 +238,17 @@ def run_lindblad(
     * ``"mcsolve"`` — Monte Carlo trajectories; ``n_traj`` controls statistics.
 
     The NumPy backend always uses dense ``mesolve`` (small N reference).
+
+    Examples
+    --------
+    Open-system run with the experimental T₁/T₂*::
+
+        >>> import numpy as np
+        >>> from rydberg_trampoline import ModelParams, run_lindblad
+        >>> params = ModelParams(N=6, Delta_l=1.0, T1=28.0, T2_star=3.8)
+        >>> res = run_lindblad(params, np.linspace(0, 0.5, 6), backend='numpy')
+        >>> res.m_afm.shape
+        (6,)
     """
     require_backend(backend)
     if not params.is_open():
@@ -250,7 +289,20 @@ def run_itebd(
     """Infinite-chain TEBD using TeNPy.
 
     Returns the M_AFM trace evaluated on the two-site unit cell of the
-    iMPS. ``chi`` is the maximum bond dimension (paper uses 100).
+    iMPS. ``chi`` is the maximum bond dimension (paper uses 100). NN-only
+    vdW is enforced by the backend (see ``docs/figures/itebd_unit_cell.png``
+    for the unit-cell schematic).
+
+    Examples
+    --------
+    Thermodynamic-limit M_AFM(t) at NN-only vdW::
+
+        >>> import numpy as np
+        >>> from rydberg_trampoline import ModelParams, run_itebd
+        >>> params = ModelParams(N=2, Delta_l=2.0, vdW_cutoff=1)
+        >>> res = run_itebd(params, np.linspace(0, 0.2, 5), chi=32)
+        >>> res.backend
+        'tenpy'
     """
     require_backend("tenpy")
     from rydberg_trampoline.backends.tenpy_backend import run_itebd as _run

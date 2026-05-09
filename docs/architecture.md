@@ -50,6 +50,38 @@ rydberg_trampoline/
 └── cli.py                  thin argparse wrapper for figures
 ```
 
+## Figure-generation scripts
+
+The package ships two complementary kinds of figure scripts:
+
+* **Hero figures** — `rydberg_trampoline/figures/fig_*.py`. Each runs a
+  full simulation (parametrized by CLI flags) and writes a PNG plus a
+  JSON sidecar to `docs/figures/`. They are also runnable as
+  `python -m rydberg_trampoline.figures.fig_<name>` and double as
+  worked examples of the public API.
+* **Static schematics** — `scripts/draw_*.py`. One-shot matplotlib
+  generators that *don't* depend on the simulation pipeline; they
+  visualise concepts (geometry, vdW tail, level scheme, bubbles,
+  the iTEBD unit cell, the Néel-prep ramp, the Hilbert-space
+  scaling) and write to `docs/figures/`. They run in seconds with
+  no extras beyond the base install.
+
+| Script | Concept visualised | Output |
+|--------|-------------------|--------|
+| [`scripts/draw_level_scheme.py`](../scripts/draw_level_scheme.py) | Two-photon dressed `g↔r` Rabi drive Ω, detuning Δ | `level_scheme.png` |
+| [`scripts/draw_ring_geometry.py`](../scripts/draw_ring_geometry.py) | 16-site PBC ring with even/odd staggered colouring | `ring_geometry.png` |
+| [`scripts/draw_vij_curve.py`](../scripts/draw_vij_curve.py) | `1/r⁶` pair coupling with `vdW_cutoff` truncations | `vij_curve.png` |
+| [`scripts/draw_hilbert_dim.py`](../scripts/draw_hilbert_dim.py) | `2^N`, `4^N`, sector, iTEBD memory cost vs N | `hilbert_dim_vs_N.png` |
+| [`scripts/draw_bubble_cartoon.py`](../scripts/draw_bubble_cartoon.py) | Three-row cartoon: FV, single-flip bubble, length-3 bubble | `bubble_cartoon.png` |
+| [`scripts/draw_bubble_pedagogy.py`](../scripts/draw_bubble_pedagogy.py) | Length-1, 2, 3, 4 bubbles side-by-side | `bubble_pedagogy.png` |
+| [`scripts/draw_itebd_unit_cell.py`](../scripts/draw_itebd_unit_cell.py) | 2-site iMPS unit cell, NN-only vdW, translation-by-2 | `itebd_unit_cell.png` |
+| [`scripts/draw_neel_prep_ramp.py`](../scripts/draw_neel_prep_ramp.py) | Bernien-style bloqade Néel-prep ramp profile | `neel_prep_ramp.png` |
+
+When you commit a new schematic PNG, regenerate
+`tests/figure_hashes.json` per the one-liner in
+[`tests/test_figure_regression.py`](../tests/test_figure_regression.py)
+to keep the perceptual-hash regression honest.
+
 ## The `run_unitary` call flow
 
 ```mermaid
@@ -80,6 +112,26 @@ its own program submitted to the emulator (or to QuEra Aquila), and the
 "state(s) at each time" arrow above is replaced by a `(n_shots, N)` array
 of bitstrings that gets fed to `_m_afm_from_bitstrings` rather than to the
 diagonal-observable evaluator.
+
+## From traces to action B (the fit pipeline)
+
+`analysis.py` composes two fits to convert per-Δ_l traces into the
+headline tunneling action:
+
+```mermaid
+flowchart LR
+    classDef trace fill:#fadbd8,stroke:#c0392b,color:#922b21;
+    classDef fit fill:#d5f5e3,stroke:#16a085,color:#0e6655;
+    classDef out fill:#ecf0f1,stroke:#2c3e50,color:#2c3e50;
+
+    T["DynamicsResult.m_afm(t)<br/>at fixed Δ_l"]:::trace
+        --> F1["fit_decay_rate<br/>(single-exp on M^res)"]:::fit
+    F1 --> G["DecayFit.Gamma(Δ_l)"]:::out
+    G --> F2["fit_tunneling_action<br/>(linreg on log Γ vs 1/Δ_l)"]:::fit
+    F2 --> B["TunnelingFit.A, B"]:::out
+```
+
+*Both stages live in [`analysis.py`](../rydberg_trampoline/analysis.py): `fit_decay_rate` consumes one trace and returns `Γ`; `fit_tunneling_action` consumes the family `(Δ_l, Γ)` and returns the prefactor `A` and action `B` in `Γ ≈ A·exp(−B/Δ_l)`. The figure scripts `fig_gamma_vs_inv_delta` and `fig_gamma_N_dependence` chain both stages.*
 
 ## Type and data-class structure
 
@@ -249,5 +301,11 @@ documented tolerance, something is wrong.
   computes.
 * [`docs/cloud_quickstart.md`](cloud_quickstart.md) — running the
   bloqade backend on QuEra Aquila.
+* [`examples/`](../examples/) — runnable scripts that exercise the
+  public API; in particular
+  [`02_cross_backend.py`](../examples/02_cross_backend.py) is the
+  shell counterpart of `tests/test_cross_backend.py`, and
+  [`04_bloqade_emulator.py`](../examples/04_bloqade_emulator.py)
+  demonstrates both `psi0_protocol` settings.
 * [`CLAUDE.md`](../CLAUDE.md) — the same architecture summary in the
   format consumed by Claude Code agents.

@@ -9,7 +9,7 @@ from tests.conftest import quspin_required
 
 
 @quspin_required
-@pytest.mark.parametrize("N", [4, 6, 8, 10])
+@pytest.mark.parametrize("N", [4, 6, 8, 10, 12])
 def test_kblock_decomposition_recovers_full_spectrum(N: int) -> None:
     from rydberg_trampoline.backends.quspin_backend import (
         to_quspin,
@@ -46,11 +46,18 @@ def test_translation_block_count_value() -> None:
 
 
 @quspin_required
-def test_sector_dynamics_match_full() -> None:
-    """Sector-resolved M_AFM(t) from the Néel matches full-Hilbert evolution."""
+@pytest.mark.parametrize("N", [8, 12])
+def test_sector_dynamics_match_full(N: int) -> None:
+    """Sector-resolved M_AFM(t) from the Néel matches full-Hilbert evolution.
+
+    Parametrising up to N=12 pins the kblock=0 ↔ full agreement at the
+    largest size where the full path is still fast enough for CI; the
+    figure pipeline relies on this equivalence to dispatch quspin/kblock=0
+    automatically for N ≥ 13 via :func:`figures._common.pick_unitary_backend`.
+    """
     from rydberg_trampoline.dynamics import run_unitary
 
-    params = ModelParams(N=8, Delta_l=2.0, vdW_cutoff=4)
+    params = ModelParams(N=N, Delta_l=2.0, vdW_cutoff=4)
     times = np.linspace(0.0, 1.0, 21)
     res_full = run_unitary(params, times, backend="quspin")
     res_k0 = run_unitary(params, times, backend="quspin", kblock=0)

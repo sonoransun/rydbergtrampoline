@@ -22,6 +22,7 @@ from rydberg_trampoline.backends import available_backends
 _FIGURES = {
     "decay": "fig_decay_traces",
     "gamma": "fig_gamma_vs_inv_delta",
+    "gamma-N": "fig_gamma_N_dependence",
     "resonance": "fig_resonance_scan",
     "bubbles": "fig_bubble_histogram",
     "imperfection": "fig_imperfection_sensitivity",

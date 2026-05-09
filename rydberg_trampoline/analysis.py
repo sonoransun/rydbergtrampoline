@@ -61,6 +61,16 @@ def fit_decay_rate(
         at 1/2 (the maximally-mixed value).
     t_min, t_max
         Restrict the fit window. Default uses the full grid.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from rydberg_trampoline.analysis import fit_decay_rate
+    >>> times = np.linspace(0, 2.0, 41)
+    >>> m = 0.5 + 0.5 * np.exp(-0.7 * times)   # synthetic exp decay → mixed
+    >>> fit = fit_decay_rate(times, m, rescale=False, free_offset=True)
+    >>> bool(fit.success), round(fit.Gamma, 3)
+    (True, 0.7)
     """
     times = np.asarray(times, dtype=np.float64)
     m = np.asarray(m_afm, dtype=np.float64)
@@ -115,6 +125,16 @@ def fit_tunneling_action(
 
     Performs a linear regression on ``log Γ`` vs ``1/Δ_l`` for stability,
     which is exactly the form of the paper's Fig. 3.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from rydberg_trampoline.analysis import fit_tunneling_action
+    >>> deltas = np.array([0.5, 1.0, 1.5, 2.0, 2.5, 3.0])
+    >>> gammas = 1.7 * np.exp(-0.8 / deltas)
+    >>> fit = fit_tunneling_action(deltas, gammas)
+    >>> bool(fit.success), round(fit.B, 3), round(fit.A, 3)
+    (True, 0.8, 1.7)
     """
     x = 1.0 / np.asarray(delta_l_values, dtype=np.float64)
     y = np.log(np.asarray(gamma_values, dtype=np.float64))

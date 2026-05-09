@@ -60,6 +60,10 @@ configuration. Bubbles of contiguous flipped sites mediate the decay:
 
 *The false-vacuum Néel (top), a single-site bubble seed (middle), and a length-3 bubble (bottom) with two domain walls highlighted at the boundaries.*
 
+![Length-1, length-2, length-3, and length-4 bubbles drawn side by side on 12-site rings, each with two domain-wall boundaries highlighted](docs/figures/bubble_pedagogy.png)
+
+*The Σ_L bubble-density operator counts contiguous L-flipped runs bordered by domain walls. The four panels make the L → L + 1 progression explicit: each panel adds one more flipped site to the bubble interior.*
+
 Each backend simulates the staggered-Rydberg Hamiltonian under a
 specific computational tradeoff. The Hilbert-space cost grows
 exponentially in N for full ED, doubly-exponentially for Lindblad, and
@@ -190,6 +194,27 @@ flowchart LR
 ```
 
 *Each backend emits its native Hamiltonian object, hands it to a backend-appropriate solver, and converges on the shared `M_AFM` / `Σ_L` observable evaluator before fitting Γ.*
+
+### From traces to action B
+
+The fit pipeline that converts `M_AFM(t)` traces into the headline
+tunneling action `B` lives in [`analysis.py`](rydberg_trampoline/analysis.py)
+and composes two functions:
+
+```mermaid
+flowchart LR
+    classDef trace fill:#fadbd8,stroke:#c0392b,color:#922b21;
+    classDef fit fill:#d5f5e3,stroke:#16a085,color:#0e6655;
+    classDef out fill:#ecf0f1,stroke:#2c3e50,color:#2c3e50;
+
+    T["DynamicsResult.m_afm(t)<br/>at fixed Δ_l"]:::trace
+        --> F1["fit_decay_rate<br/>(single-exp on M^res)"]:::fit
+    F1 --> G["DecayFit.Gamma(Δ_l)"]:::out
+    G --> F2["fit_tunneling_action<br/>(linreg on log Γ vs 1/Δ_l)"]:::fit
+    F2 --> B["TunnelingFit.A, B"]:::out
+```
+
+*Per-Δ_l early-time fit gives Γ; the family of (Δ_l, Γ) points is then linear-regressed in `(1/Δ_l, log Γ)` to recover the tunneling action B in `Γ ≈ A·exp(−B/Δ_l)`.*
 
 ---
 
@@ -341,6 +366,24 @@ res = run_itebd(params.with_(T1=None, T2_star=None, vdW_cutoff=1), times, chi=80
 
 ---
 
+## Examples
+
+Standalone runnable scripts under [`examples/`](examples/) demonstrate
+each major use case without cluttering the API. Each is ≤80 lines and
+runs as `python examples/NN_*.py` from the repository root:
+
+| Script | What it shows |
+|--------|---------------|
+| [`01_quickstart.py`](examples/01_quickstart.py) | `ModelParams` → `run_unitary` → `M_AFM(t)` and a single-exp Γ fit. |
+| [`02_cross_backend.py`](examples/02_cross_backend.py) | numpy ↔ qutip ↔ quspin agreement on M_AFM(t); skips missing extras. |
+| [`03_finite_size_scaling.py`](examples/03_finite_size_scaling.py) | Sweep `Δ_l` at two ring sizes, fit `B(N)`. Distilled from `fig_gamma_N_dependence`. |
+| [`04_bloqade_emulator.py`](examples/04_bloqade_emulator.py) | bloqade emulator with both `psi0_protocol='ground'` and `'neel_via_ramp'`. |
+
+See [`examples/README.md`](examples/README.md) for the full table and
+the per-script prerequisites.
+
+---
+
 ## Backend reference
 
 | Backend | Methods | Hard cap on N | Extra dependency |
@@ -443,6 +486,9 @@ Avoids the QuSpin / TeNPy install dance on contributor machines.
   backend's solver actually does, with complexity and accuracy tables.
 - [`docs/cloud_quickstart.md`](docs/cloud_quickstart.md) — running on
   QuEra Aquila via AWS Braket.
+- [`examples/`](examples/) — four standalone runnable scripts
+  exercising the public API (quickstart, cross-backend agreement,
+  finite-size scaling, bloqade emulator with Néel-prep ramp).
 - [`CLAUDE.md`](CLAUDE.md) — same architecture summary in the format
   consumed by Claude Code agents.
 

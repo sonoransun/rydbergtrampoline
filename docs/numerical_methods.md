@@ -109,6 +109,10 @@ Rough rule of thumb:
 
 ### `tenpy` — TEBD on a 2-site iMPS
 
+![Schematic of the 2-site iMPS unit cell with periodic translation-by-2 and the NN-only vdW bond](figures/itebd_unit_cell.png)
+
+*A two-site unit cell `(A, B)` tiles infinitely under translation-by-2; site A carries `+Δ_l`, site B carries `−Δ_l`, and the only retained two-body coupling is the NN vdW bond. TeNPy 1.1's `ExpMPOEvolution` (W^II MPO) for long-range terms was tried and is unstable for this model, so `vdW_cutoff > 1` is silently clamped to NN.*
+
 * **Hamiltonian.** A `CouplingMPOModel` with custom `init_lattice`
   returning a `Lattice(Ls=[1], unit_cell=[SpinHalfSite, SpinHalfSite],
   bc_MPS="infinite")`. The 2-site unit cell makes the staggered field

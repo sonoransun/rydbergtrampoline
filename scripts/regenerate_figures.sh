@@ -15,7 +15,7 @@ cd "$REPO_ROOT"
 PYTHON="${PYTHON:-python}"
 EXTRA_ARGS=("$@")
 
-for figure in decay gamma resonance bubbles imperfection; do
+for figure in decay gamma gamma-N resonance bubbles imperfection; do
     echo "==> $figure"
     "$PYTHON" -m rydberg_trampoline.cli figures "$figure" -- "${EXTRA_ARGS[@]}"
 done

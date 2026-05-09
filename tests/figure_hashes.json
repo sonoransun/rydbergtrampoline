@@ -1,5 +1,6 @@
 {
   "bubble_cartoon.png": "ea4bd86ad5238595",
+  "bubble_pedagogy.png": "bc2bac6b3ca8a859",
   "fig_bubble_histogram.png": "bec1e31f8562943a",
   "fig_decay_traces.png": "aa6e3f9d41617138",
   "fig_gamma_vs_inv_delta.png": "ba1e7e4e6132e834",
@@ -7,7 +8,9 @@
   "fig_resonance_scan.png": "827e6f487f99a019",
   "fig_thermodynamic_limit.png": "ae603f17621bd316",
   "hilbert_dim_vs_N.png": "c0907f7bf64d204b",
+  "itebd_unit_cell.png": "e362c8d833339e8e",
   "level_scheme.png": "9b30a4496d2e2f3d",
+  "neel_prep_ramp.png": "aa1d3e38b468975a",
   "ring_geometry.png": "bd6cf22dcb0c0c33",
   "vij_curve.png": "ca5a6aa1394c6c77"
 }

@@ -110,6 +110,13 @@ def m_afm_expectation(psi_or_diag: np.ndarray, N: int | None = None) -> float | 
     * ``psi_or_diag`` is a density-matrix diagonal of length 2^N: we just dot.
 
     ``N`` is required only when it cannot be inferred from the array length.
+
+    Examples
+    --------
+    >>> from rydberg_trampoline.states import neel_state
+    >>> from rydberg_trampoline.observables import m_afm_expectation
+    >>> float(m_afm_expectation(neel_state(8, phase=0)))
+    1.0
     """
     arr = np.asarray(psi_or_diag)
     if N is None:
@@ -127,7 +134,23 @@ def m_afm_expectation(psi_or_diag: np.ndarray, N: int | None = None) -> float | 
 def bubble_correlator_expectation(
     psi: np.ndarray, L: int, *, fv_phase: int = 0, N: int | None = None
 ) -> float | np.ndarray:
-    """Expectation value of the bubble-density operator Σ_L."""
+    """Expectation value of the bubble-density operator Σ_L.
+
+    See ``docs/figures/bubble_pedagogy.png`` for the visual definition
+    of a length-L bubble.
+
+    Examples
+    --------
+    A single length-1 bubble inserted into a 12-site Néel false vacuum::
+
+        >>> from rydberg_trampoline.states import computational_basis_vector
+        >>> from rydberg_trampoline.conventions import neel_bitstring
+        >>> N = 12
+        >>> idx = neel_bitstring(N, phase=0) ^ (1 << 5)  # flip site 5
+        >>> psi = computational_basis_vector(N, idx)
+        >>> float(bubble_correlator_expectation(psi, L=1))
+        1.0
+    """
     arr = np.asarray(psi)
     if N is None:
         N = int(np.log2(arr.shape[-1]))

@@ -41,15 +41,43 @@ floor is ~1/√n_shots.
 ## Initial state restriction
 
 Aquila and the emulator both start atoms in the all-ground state
-``|gg…g⟩``. Passing a different ``psi0`` raises ``ValueError`` — for
-true apples-to-apples cross-backend comparisons set the same all-ground
-initial state on the local backends:
+``|gg…g⟩``. The default ``psi0_protocol='ground'`` requires ``psi0`` to be
+``None`` or the explicit ``|gg…g⟩`` basis vector — for true apples-to-
+apples cross-backend comparisons set the same all-ground initial state
+on the local backends:
 
 ```python
 from rydberg_trampoline.states import computational_basis_vector
 psi_gg = computational_basis_vector(params.N, 0)
 res_np = run_unitary(params, times, backend="numpy", psi0=psi_gg)
 ```
+
+### Néel false-vacuum prep via an adiabatic ramp
+
+For finite-N false-vacuum-decay studies the bloqade backend exposes
+``psi0_protocol='neel_via_ramp'``: a Bernien-style Z2 state-prep ramp is
+prepended to every program so the system arrives at the false-vacuum
+Néel before the staggered evolution begins. The ramp profile under the
+default :class:`~rydberg_trampoline.backends.bloqade_backend.NeelPrepRamp`
+parameters:
+
+![Three-panel chart of Ω(t), Δ_uniform(t), and per-site staggered offsets across the prep and evolution segments](figures/neel_prep_ramp.png)
+
+*Top: Rabi rises from 0 → Ω_max during `t_up`, holds during `t_sweep`, ramps down to the evolution Ω during `t_down`. Middle: uniform detuning sweeps `−Δ_max → +Δ_max` across the Z2 transition, then relaxes to `Δ_g`. Bottom: the per-site staggered offset is piecewise-constant, sign-flipping at the prep→evolution boundary so the prepared state is metastable under the package's physics convention.*
+
+```python
+from rydberg_trampoline.states import neel_state
+
+res = run_unitary(
+    params, times, backend="bloqade",
+    psi0=neel_state(params.N, phase=0),
+    psi0_protocol="neel_via_ramp",
+    n_shots=1000, seed=0,
+)
+```
+
+See [`examples/04_bloqade_emulator.py`](../examples/04_bloqade_emulator.py)
+for a runnable side-by-side comparison of both protocols.
 
 ## Async usage (notebooks, larger pipelines)
 
@@ -120,7 +148,6 @@ submitted.
 * Trotterized cloud simulators (Braket SV1, Qiskit Runtime).
 * Open-system Lindblad on Aquila (not first-class on the device).
 * Bubble correlators ``Σ_L`` (need ≫ 1k shots for usable noise).
-* Adiabatic Néel preparation ramp on hardware.
 
 See `rydberg_trampoline/backends/bloqade_backend.py` for the
 implementation and the full async API surface.

@@ -8,6 +8,43 @@ reaches 1.0.
 ## [Unreleased]
 
 ### Added
+- **Documentation, README, and examples overhaul.** Three new schematic
+  PNGs in `docs/figures/`: `bubble_pedagogy.png` (length-1, 2, 3, 4
+  bubbles side-by-side with domain-wall annotations — fills the gap
+  left by `bubble_cartoon.png` showing only L=1, 3),
+  `itebd_unit_cell.png` (2-site iMPS unit cell with NN-only vdW and
+  translation-by-2 tile arrows), and `neel_prep_ramp.png`
+  (three-panel time-axis chart of Ω(t), Δ_uniform(t), and per-site
+  staggered offset under the bloqade `NeelPrepRamp` defaults). Driven
+  by three new one-shot generators `scripts/draw_bubble_pedagogy.py`,
+  `scripts/draw_itebd_unit_cell.py`, and `scripts/draw_neel_prep_ramp.py`.
+  README gains a "From traces to action B" Mermaid block (the fit
+  pipeline) and an "Examples" subsection cross-linking the new
+  `examples/` directory; `docs/architecture.md` gains the same fit-
+  pipeline block plus a "Figure-generation scripts" subsection
+  inventorying all eight generators; `docs/numerical_methods.md`
+  embeds the iTEBD unit-cell schematic; `docs/cloud_quickstart.md`
+  embeds the Néel-prep ramp chart and documents
+  `psi0_protocol='neel_via_ramp'`. `tests/figure_hashes.json`
+  regenerated (14 PNGs, was 12).
+- **`/examples/` directory.** Four standalone runnable scripts plus
+  a `README.md`: `01_quickstart.py` (minimal `run_unitary` →
+  `M_AFM(t)` → Γ fit), `02_cross_backend.py` (numpy ↔ qutip ↔ quspin
+  agreement; skips missing extras), `03_finite_size_scaling.py`
+  (finite-N B(N) sweep using `pick_unitary_backend`), and
+  `04_bloqade_emulator.py` (both bloqade `psi0_protocol` settings).
+  Each script honours `RYDBERG_TRAMPOLINE_TEST_MODE=1` to clamp
+  grids for CI.
+- **Docstring examples on the public API.** Top-level
+  `rydberg_trampoline.__init__`, the three dispatcher entry points
+  (`run_unitary`, `run_lindblad`, `run_itebd`), and the analysis
+  helpers (`fit_decay_rate`, `fit_tunneling_action`,
+  `m_afm_expectation`, `bubble_correlator_expectation`) now carry
+  short Examples blocks in their docstrings.
+- **`tests/test_examples.py`** — every example script must run to
+  completion under test mode and must be listed in `examples/README.md`.
+- **`tests/test_draw_schematics.py`** — smoke entries for the three
+  new schematic generators.
 - **Documentation expansion.** Two new long-form docs:
   [`docs/architecture.md`](docs/architecture.md) (module map,
   `run_unitary` Mermaid sequence diagram, class diagram, basis-ordering

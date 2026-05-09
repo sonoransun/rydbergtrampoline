@@ -89,8 +89,9 @@ def test_cloud_with_flag_but_no_creds_fails_at_auth_probe(monkeypatch) -> None:
 
 @bloqade_required
 def test_psi0_must_be_all_ground() -> None:
+    """Default psi0_protocol='ground' rejects a Néel ψ₀."""
     params = ModelParams(N=4, Omega=1.8, Delta_g=4.8, Delta_l=0.5, V_NN=6.0)
-    with pytest.raises(ValueError, match="all-ground"):
+    with pytest.raises(ValueError, match=r"\|gg\.\.\.g"):
         run_unitary(
             params,
             np.array([0.1]),
@@ -144,6 +145,65 @@ def test_emulator_matches_numpy_from_ground_state() -> None:
 # ---------------------------------------------------------------------------
 # Async usage
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Néel state-prep ramp (Mode C entry point)
+# ---------------------------------------------------------------------------
+
+
+@bloqade_required
+def test_neel_via_ramp_psi0_protocol_accepts_neel() -> None:
+    """psi0_protocol='neel_via_ramp' accepts a Néel ψ₀ but still rejects
+    states that don't match the false-vacuum convention."""
+    params = ModelParams(N=4, Omega=1.8, Delta_g=4.8, Delta_l=0.5, V_NN=6.0)
+    times = np.array([0.0, 0.05])
+    # Néel false vacuum is accepted.
+    res = run_unitary(
+        params, times, backend="bloqade",
+        psi0=neel_state(4, phase=0),
+        psi0_protocol="neel_via_ramp",
+        n_shots=50, seed=0,
+    )
+    # t=0 short-circuits to M_AFM(0) = +1 on the (about-to-be-prepared) Néel.
+    assert res.m_afm[0] == 1.0
+    # Wrong-phase Néel is rejected.
+    with pytest.raises(ValueError, match="false-vacuum Néel"):
+        run_unitary(
+            params, np.array([0.05]), backend="bloqade",
+            psi0=neel_state(4, phase=1),  # true vacuum, not false
+            psi0_protocol="neel_via_ramp",
+            n_shots=10,
+        )
+
+
+@bloqade_required
+def test_neel_prep_ramp_emulator_lands_in_false_vacuum() -> None:
+    """End-to-end: the Bernien-style Z2 ramp prepares M_AFM ≳ 0.5 at N=4.
+
+    A loose threshold because the in-process emulator integrates the full
+    ramp dynamics — finite ramp speed ⇒ imperfect adiabaticity. The
+    threshold is at the level the figure pipeline can tolerate (Γ fits
+    absorb a 50 %-scale offset in M(0); the rescaled
+    M_AFM^res(t) = (M(t) + M(0)) / (2 M(0)) used by ``fit_decay_rate``
+    normalises the initial value out).
+    """
+    params = ModelParams(N=4, Omega=1.8, Delta_g=4.8, Delta_l=0.5, V_NN=6.0)
+    # Sample at a single short evolution time so we measure essentially the
+    # post-prep M_AFM (the prep does the heavy lifting). Use the default
+    # NeelPrepRamp params, which are tuned for this regime.
+    times = np.array([0.05])
+    res = run_unitary(
+        params, times, backend="bloqade",
+        psi0=neel_state(4, phase=0),
+        psi0_protocol="neel_via_ramp",
+        n_shots=400, seed=11,
+    )
+    assert res.backend == "bloqade-emulator"
+    assert res.m_afm[-1] >= 0.5, (
+        f"Néel prep landed at M_AFM={res.m_afm[-1]:.3f} (< 0.5); the ramp "
+        "parameters may need re-tuning."
+    )
 
 
 @bloqade_required

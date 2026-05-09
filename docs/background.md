@@ -211,6 +211,19 @@ boundaries are the *domain walls* (kinks where neighbours disagree).
 The package's `Σ_L` bubble-density operator counts exactly these
 length-`L` runs of TV-on-FV with FV-bordering on both ends.
 
+![Four panels showing length-1, length-2, length-3, and length-4 bubbles side by side on 12-site rings](figures/bubble_pedagogy.png)
+
+*Length-L bubbles for L = 1, 2, 3, 4. Each panel highlights the contiguous flipped run (the bubble interior) and the two domain-wall boundaries that frame it.*
+
+The L → L + 1 progression makes the operator definition concrete: the
+matrix element `Σ_L` couples the false vacuum to a fixed bubble length
+`L`, and a resonance at `Δ_l ≈ Δ*` aligns the false-vacuum energy with
+a discrete length-`L*` bubble eigenstate. Beyond `L = 4` the bubble
+interior fills more than half the ring at `N = 12` and the operator
+loses meaning; the runnable example
+[`examples/03_finite_size_scaling.py`](../examples/03_finite_size_scaling.py)
+restricts to `L ≤ 3` for that reason.
+
 Operationally this shows up as:
 
 * humps in the `Γ vs 1/Δ_l` curve at specific detunings;

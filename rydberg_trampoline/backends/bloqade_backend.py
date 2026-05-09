@@ -48,6 +48,7 @@ import asyncio
 import os
 import sys
 import warnings
+from dataclasses import dataclass
 from typing import Iterable, Literal
 
 import numpy as np
@@ -56,20 +57,89 @@ from rydberg_trampoline.dynamics import DynamicsResult
 from rydberg_trampoline.model import ModelParams
 
 
-def _ensure_bloqade_ground_state(N: int, psi0: np.ndarray | None) -> None:
-    """Refuse to silently start from anything other than ``|gg…g⟩``."""
-    if psi0 is None:
+Psi0Protocol = Literal["ground", "neel_via_ramp"]
+
+
+@dataclass(frozen=True, slots=True)
+class NeelPrepRamp:
+    """Parameters of the adiabatic Bernien-style Z2 state-prep ramp.
+
+    Profiles applied during ``prep_time = t_up + t_sweep + t_down``:
+
+    * Rabi:    0 → ``omega_max_factor·Ω`` during t_up; held during t_sweep;
+               ramped down to ``Ω`` (the evolution value) during t_down.
+    * Detuning (uniform): held at ``-delta_max_factor·Δ_g`` during t_up;
+      swept linearly to ``+delta_max_factor·Δ_g`` during t_sweep; relaxes
+      to ``Δ_g`` (evolution value) during t_down.
+    * Per-site staggered detuning: piecewise-constant across the prep→
+      evolution boundary. During prep the magnitude is
+      ``delta_l_prep_factor·Δ_l`` with the *same* per-site sign convention
+      that the evolution segment uses (so bloqade lands the system in the
+      bloqade-side "false vacuum" Z2 sector — see the docstring of
+      :func:`_build_program` for the empirical sign verification).
+
+    Defaults are tuned for the paper's parameter regime (Ω ≈ 1.8, Δ_g ≈ 4.8,
+    V_NN = 6 in package units) and validated by
+    ``test_neel_prep_ramp_emulator_lands_in_false_vacuum`` at N=4. Larger
+    rings benefit from a longer ``t_sweep``; pass a custom
+    :class:`NeelPrepRamp` to ``run_unitary(..., prep_ramp=...)`` to
+    override.
+    """
+
+    t_up: float = 1.0       # μs — Rabi ramp-up
+    t_sweep: float = 5.0    # μs — Δ sweep through the Z2 transition
+    t_down: float = 1.0     # μs — Rabi ramp-down to the evolution value
+    omega_max_factor: float = 4.0   # multiplies params.Omega during prep
+    delta_max_factor: float = 4.0   # multiplies params.Delta_g
+    delta_l_prep_factor: float = 8.0  # multiplies params.Delta_l (magnitude)
+
+    @property
+    def prep_time(self) -> float:
+        return float(self.t_up + self.t_sweep + self.t_down)
+
+
+def _ensure_psi0_compatible(
+    N: int, psi0: np.ndarray | None, protocol: Psi0Protocol
+) -> None:
+    """Validate ``psi0`` against the chosen state-prep protocol.
+
+    * ``"ground"`` (default) — ``psi0`` must be ``None`` or ``|gg…g⟩``;
+      preserves the Aquila hardware constraint that every program starts
+      in the all-ground state.
+    * ``"neel_via_ramp"`` — ``psi0`` must be ``None`` or the false-vacuum
+      Néel state. The actual program still starts from ``|gg…g⟩`` in
+      hardware terms; the Néel is *prepared* by an adiabatic Z2 ramp
+      prepended to the evolution segment.
+    """
+    if protocol == "ground":
+        if psi0 is None:
+            return
+        expected = np.zeros(1 << N, dtype=np.complex128)
+        expected[0] = 1.0
+        if not np.allclose(psi0, expected, atol=1e-10):
+            raise ValueError(
+                "bloqade backend with psi0_protocol='ground' can only start "
+                "from |gg...g⟩ (Aquila hardware constraint). Pass psi0=None "
+                "or the explicit |gg...g⟩ basis vector. For a Néel start "
+                "use psi0_protocol='neel_via_ramp'."
+            )
         return
-    expected = np.zeros(1 << N, dtype=np.complex128)
-    expected[0] = 1.0  # |gg…g⟩ is the all-zero bitstring → integer 0
-    if not np.allclose(psi0, expected, atol=1e-10):
-        raise ValueError(
-            "bloqade backend can only start from the all-ground state "
-            "|gg...g⟩ (Aquila hardware constraint). Pass psi0=None or the "
-            "explicit |gg...g⟩ basis vector. To compare with the Néel-"
-            "initial trace from other backends, run them with the same "
-            "matching initial state."
-        )
+    if protocol == "neel_via_ramp":
+        if psi0 is None:
+            return
+        from rydberg_trampoline.states import neel_state
+
+        expected = neel_state(N, phase=0)
+        if not np.allclose(psi0, expected, atol=1e-10):
+            raise ValueError(
+                "bloqade backend with psi0_protocol='neel_via_ramp' must "
+                "match the false-vacuum Néel (phase=0). Either pass psi0=None "
+                "or psi0=neel_state(N, phase=0)."
+            )
+        return
+    raise ValueError(
+        f"unknown psi0_protocol {protocol!r}; expected 'ground' or 'neel_via_ramp'"
+    )
 
 
 def _check_cost_gate(device: str, i_understand: bool) -> None:
@@ -127,8 +197,21 @@ def _m_afm_from_bitstrings(bitstrings: np.ndarray) -> float:
     return float(per_shot_m_afm.mean())
 
 
-def _build_program(params: ModelParams, T_us: float):
-    """Construct a bloqade analog program for evolution of duration ``T_us``."""
+def _build_program(
+    params: ModelParams,
+    T_us: float,
+    *,
+    prep: NeelPrepRamp | None = None,
+):
+    """Construct a bloqade analog program for evolution of duration ``T_us``.
+
+    When ``prep`` is given, an adiabatic Néel-prep segment of total duration
+    ``prep.prep_time`` is prepended to the evolution segment so the system
+    arrives at the false-vacuum Néel before the staggered evolution begins.
+    The total program duration is ``prep.prep_time + T_us``; M_AFM is sampled
+    only at the very end (so the caller's ``T_us`` is the *physical*
+    evolution time after preparation).
+    """
     import bloqade.analog as ba
 
     a = _lattice_spacing_um(params.V_NN)
@@ -146,22 +229,86 @@ def _build_program(params: ModelParams, T_us: float):
     if T_us <= 0:
         raise ValueError(f"duration must be positive, got {T_us}")
 
+    if prep is None:
+        program = (
+            ba.start
+            .add_position(positions)
+            .rydberg.rabi.amplitude.uniform.constant(value=omega_rad, duration=T_us)
+            .rydberg.detuning.uniform.constant(value=detuning_uniform_rad, duration=T_us)
+        )
+        if params.Delta_l != 0.0 and even_sites:
+            program = (
+                program.rydberg.detuning.location(even_sites)
+                .constant(value=-detuning_local_rad, duration=T_us)
+            )
+        if params.Delta_l != 0.0 and odd_sites:
+            program = (
+                program.rydberg.detuning.location(odd_sites)
+                .constant(value=+detuning_local_rad, duration=T_us)
+            )
+        return program
+
+    # ----- Néel-prep ramp + evolution -----
+    omega_max = float(prep.omega_max_factor) * omega_rad
+    delta_max = float(prep.delta_max_factor) * detuning_uniform_rad
+    delta_l_prep = float(prep.delta_l_prep_factor) * detuning_local_rad
+
+    # Per-segment durations during prep (3) + the evolution segment (1).
+    prep_durations = [float(prep.t_up), float(prep.t_sweep), float(prep.t_down)]
+    if any(d <= 0 for d in prep_durations):
+        raise ValueError(
+            f"prep ramp durations must be positive; got "
+            f"t_up={prep.t_up}, t_sweep={prep.t_sweep}, t_down={prep.t_down}"
+        )
+    total_durations = prep_durations + [T_us]
+
+    # Rabi: 0 → Ω_max during t_up; hold during t_sweep; Ω_max → Ω during t_down;
+    # hold at Ω during T_us. piecewise_linear takes len(durations)+1 knots.
+    omega_values = [0.0, omega_max, omega_max, omega_rad, omega_rad]
+
+    # Uniform detuning: hold at -Δ_max during t_up; sweep -Δ_max → +Δ_max during
+    # t_sweep; +Δ_max → Δ_g during t_down (absorbs the post-prep step into a
+    # natural ramp under reduced Ω); hold at Δ_g during T_us.
+    delta_uniform_values = [
+        -delta_max, -delta_max, +delta_max, detuning_uniform_rad, detuning_uniform_rad,
+    ]
+
     program = (
         ba.start
         .add_position(positions)
-        .rydberg.rabi.amplitude.uniform.constant(value=omega_rad, duration=T_us)
-        .rydberg.detuning.uniform.constant(value=detuning_uniform_rad, duration=T_us)
+        .rydberg.rabi.amplitude.uniform.piecewise_linear(
+            durations=total_durations, values=omega_values
+        )
+        .rydberg.detuning.uniform.piecewise_linear(
+            durations=total_durations, values=delta_uniform_values
+        )
     )
-    if params.Delta_l != 0.0 and even_sites:
-        program = (
-            program.rydberg.detuning.location(even_sites)
-            .constant(value=-detuning_local_rad, duration=T_us)
-        )
-    if params.Delta_l != 0.0 and odd_sites:
-        program = (
-            program.rydberg.detuning.location(odd_sites)
-            .constant(value=+detuning_local_rad, duration=T_us)
-        )
+    # Per-site staggered detuning: piecewise-constant across (prep, evolution).
+    # The prep segment uses the *same* per-site sign convention as the
+    # existing evolution segment (even location = -Δ_l_prep, odd = +Δ_l_prep);
+    # bloqade's location() empirically lands the system in the bloqade-side
+    # "false vacuum" (positive M_AFM in the package's bitstring convention)
+    # under this sign — see ``test_neel_prep_ramp_emulator_lands_in_false_vacuum``.
+    # The magnitude factor ``delta_l_prep_factor`` (default 4×) drives a
+    # clean Z2 selection during the adiabatic ramp.
+    prep_total = sum(prep_durations)
+    if delta_l_prep != 0.0 or detuning_local_rad != 0.0:
+        if even_sites:
+            program = (
+                program.rydberg.detuning.location(even_sites)
+                .piecewise_constant(
+                    durations=[prep_total, T_us],
+                    values=[-delta_l_prep, -detuning_local_rad],
+                )
+            )
+        if odd_sites:
+            program = (
+                program.rydberg.detuning.location(odd_sites)
+                .piecewise_constant(
+                    durations=[prep_total, T_us],
+                    values=[+delta_l_prep, +detuning_local_rad],
+                )
+            )
     return program
 
 
@@ -170,6 +317,8 @@ async def run_unitary_async(
     times: np.ndarray,
     *,
     psi0: np.ndarray | None = None,
+    psi0_protocol: Psi0Protocol = "ground",
+    prep_ramp: NeelPrepRamp | None = None,
     n_shots: int = 1000,
     device: Literal["emulator", "cloud"] = "emulator",
     i_understand_this_costs_money: bool = False,
@@ -189,11 +338,22 @@ async def run_unitary_async(
         ``params.V_NN``.
     times
         1D array of evaluation times in μs. ``times[0]`` should be ≥ 0;
-        ``times[0] == 0`` is treated specially (M_AFM(0) on |gg…g⟩ is 0
-        for even N, no submission needed).
+        ``times[0] == 0`` is treated specially (M_AFM(0) on the prepared
+        Néel false vacuum is +1; on |gg…g⟩ it is 0). No submission is
+        made for the t=0 sample.
     psi0
-        Must be ``None`` or the explicit ``|gg…g⟩`` basis vector;
-        anything else is rejected because Aquila cannot prepare it.
+        Either ``None`` or a basis vector matching ``psi0_protocol``.
+        See :func:`_ensure_psi0_compatible` for the per-protocol
+        accepted values.
+    psi0_protocol
+        ``"ground"`` (default) starts from ``|gg…g⟩`` (the historical
+        Aquila contract). ``"neel_via_ramp"`` prepends an adiabatic
+        Bernien-style Z2-prep ramp to each program so the false-vacuum
+        Néel is prepared on hardware before the evolution segment runs.
+    prep_ramp
+        Override the default Néel-prep ramp parameters. ``None`` (the
+        default) uses :class:`NeelPrepRamp` defaults
+        (3 μs total prep window). Ignored when ``psi0_protocol='ground'``.
     n_shots
         Shots per timepoint.
     device
@@ -218,22 +378,26 @@ async def run_unitary_async(
             stacklevel=2,
         )
 
-    _ensure_bloqade_ground_state(params.N, psi0)
+    _ensure_psi0_compatible(params.N, psi0, psi0_protocol)
     _check_cost_gate(device, i_understand_this_costs_money)
+
+    prep: NeelPrepRamp | None = None
+    if psi0_protocol == "neel_via_ramp":
+        prep = prep_ramp if prep_ramp is not None else NeelPrepRamp()
 
     n_times = len(times)
     m_trace = np.empty(n_times, dtype=np.float64)
 
-    # M_AFM(0) on |gg...g⟩ for even N is exactly zero — short-circuit and
-    # save a (potentially paid) zero-duration program.
+    # t=0: short-circuit — no submission, no shot noise. On |gg…g⟩ the AFM
+    # expectation is 0 for even N; on the prepared false-vacuum Néel it is +1.
     starts_at_zero = float(times[0]) == 0.0
     if starts_at_zero:
-        m_trace[0] = 0.0
+        m_trace[0] = 1.0 if psi0_protocol == "neel_via_ramp" else 0.0
 
     sub_times = times[1:] if starts_at_zero else times
 
     for idx, t in enumerate(sub_times):
-        program = _build_program(params, float(t))
+        program = _build_program(params, float(t), prep=prep)
         bitstrings_per_task = await _run_program(
             program,
             n_shots=n_shots,
@@ -244,10 +408,11 @@ async def run_unitary_async(
             bitstrings_per_task
         )
 
-    notes = (
-        f"bloqade {'emulator (in-process)' if device == 'emulator' else 'QuEra Aquila (cloud)'}, "
-        f"n_shots={n_shots} per timepoint"
+    where = "emulator (in-process)" if device == "emulator" else "QuEra Aquila (cloud)"
+    prep_note = (
+        f", neel_via_ramp prep_time={prep.prep_time:.2f}μs" if prep is not None else ""
     )
+    notes = f"bloqade {where}, n_shots={n_shots} per timepoint{prep_note}"
     return DynamicsResult(
         times=times, m_afm=m_trace, backend=f"bloqade-{device}", notes=notes
     )
@@ -304,6 +469,8 @@ def run_unitary(
     psi0: np.ndarray,
     times: np.ndarray,
     *,
+    psi0_protocol: Psi0Protocol = "ground",
+    prep_ramp: NeelPrepRamp | None = None,
     n_shots: int = 1000,
     device: Literal["emulator", "cloud"] = "emulator",
     i_understand_this_costs_money: bool = False,
@@ -325,6 +492,8 @@ def run_unitary(
                 params,
                 times,
                 psi0=psi0,
+                psi0_protocol=psi0_protocol,
+                prep_ramp=prep_ramp,
                 n_shots=n_shots,
                 device=device,
                 i_understand_this_costs_money=i_understand_this_costs_money,
